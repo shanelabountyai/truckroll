@@ -97,9 +97,9 @@ model PlanStop {
   planId   String       @db.Uuid
   plan     DispatchPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   techId   String       @db.Uuid
-  tech     Technician   @relation(fields: [techId], references: [id], onDelete: Cascade)
+  tech     Technician   @relation(fields: [techId], references: [id], onDelete: NoAction)
   jobId    String       @db.Uuid
-  job      Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job      Job          @relation(fields: [jobId], references: [id], onDelete: NoAction)
   seq      Int
   arrival  Int
   start    Int
