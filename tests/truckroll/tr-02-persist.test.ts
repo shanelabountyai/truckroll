@@ -6,7 +6,9 @@ import * as solver from '@/lib/dispatch/solver-client';
 import { resetAuthTables, signInAs } from '../helpers/auth';
 import { NavSignal } from '../helpers/next';
 import { addMember, makeOrg } from '../helpers/org';
+import type { Plan, Reason } from '@/lib/dispatch/contract';
 import { seedFixtureDay, translatedGolden, type Seeded } from './dispatch-db';
+import { fixtures } from './helpers';
 
 // TR-02: a plan the checker rejects is never persisted. The solver is stubbed so each case controls exactly what
 // "the solver" returns; the real solver's plans are covered by the cross-language tests and the e2e.
@@ -45,6 +47,18 @@ const counts = async () => ({
 });
 const NOTHING = { plans: 0, stops: 0, scheduled: 0 };
 
+/** Every stop taken off its route and listed unassigned with `reason`; routes and objective otherwise consistent. */
+function dropAll(p: Plan, reason: Reason): Plan {
+  const problem = fixtures.find((f) => f.name === FIX)!.problem;
+  const shiftStart = new Map(problem.techs.map((t) => [seeded.tech.get(t.id)!, t.shiftStart]));
+  const emergencies = new Set(problem.jobs.filter((j) => j.priority === 'emergency').map((j) => seeded.job.get(j.id)!));
+  const dropped = p.routes.flatMap((r) => r.stops.map((s) => s.jobId));
+  for (const r of p.routes) Object.assign(r, { stops: [], lunch: null, returnDriveMin: 0, returnAt: shiftStart.get(r.techId)! });
+  p.unassigned = [...p.unassigned, ...dropped.map((jobId) => ({ jobId, reasons: [reason] }))];
+  p.objective = { unassignedEmergencies: p.unassigned.filter((u) => emergencies.has(u.jobId)).length, lateMin: 0, driveMin: 0 };
+  return p;
+}
+
 describe('TR-02: a plan the checker rejects is never persisted', () => {
   const planted: [string, (p: ReturnType<typeof translatedGolden>) => unknown, string][] = [
     ['a stop on a tech without the skill', (p) => {
@@ -58,6 +72,9 @@ describe('TR-02: a plan the checker rejects is never persisted', () => {
     ['a drive that does not match distance.ts', (p) => { p.routes.find((r) => r.stops.length)!.stops[0]!.driveMin += 1; return p; }, 'drive-mismatch'],
     ['a job left out entirely', (p) => { p.routes.find((r) => r.stops.length)!.stops.pop(); return p; }, 'missing-job'],
     ['output that is not a plan at all', () => ({ hello: 'world' }), 'invalid-plan'],
+    // PR #1 review must-fix 2: a plan that drops jobs it had room for is refused, whatever reason it claims.
+    ['every job dropped as over-capacity', (p) => dropAll(p, 'over-capacity'), 'droppable-job'],
+    ['every job dropped with a made-up no-window-fit', (p) => dropAll(p, 'no-window-fit'), 'reason'],
   ];
 
   it.each(planted)('%s → refused, nothing written, rejection audited', async (_, mutate, code) => {
