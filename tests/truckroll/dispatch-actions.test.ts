@@ -48,7 +48,7 @@ describe('buildProblem', () => {
 describe('pins', () => {
   it('pin with a position, then unpin', async () => {
     const job = seeded.job.get('J01')!;
-    const tech = seeded.techByName.get('Tahlequah Two')!;
+    const tech = seeded.techByName.get('Tahlequah One')!; // all four fixture skills, so any job can pin here
     expect(await outcome(pinJob(slug, { id: job, techId: tech, position: '2' }))).toMatchObject({ nav: 'redirect' });
     expect(await db.job.findUnique({ where: { id: job }, select: { pinTechId: true, pinPosition: true } })).toEqual({ pinTechId: tech, pinPosition: 2 });
     const ctx = await actAs(admin, slug);
@@ -71,6 +71,13 @@ describe('pins', () => {
     expect((await db.job.findUnique({ where: { id: seeded.job.get('J01')! } }))!.pinTechId).toBeNull();
   });
 
+  it('pinning to a tech without the job\'s skill is refused at pin time', async () => {
+    const install = (await db.job.findFirst({ where: { orgId, skill: 'install' } }))!;
+    const r = await outcome(pinJob(slug, { id: install.id, techId: seeded.techByName.get('Muskogee Two')!, position: '' }));
+    expect(r.result).toMatchObject({ error: expect.stringMatching(/doesn't have the install skill/) });
+    expect((await db.job.findUnique({ where: { id: install.id } }))!.pinTechId).toBeNull();
+  });
+
   it('a member cannot pin (dispatcher only, D-25)', async () => {
     const m = await addMember(orgId, 'member', 'tech@example.test');
     await signInAs(m.id, { mfa: true });
@@ -89,6 +96,7 @@ describe('add job / add technician', () => {
     ['a duplicate job number', { ref: 'J01' }, /already exists/],
     ['a bad time', { windowStart: '9am' }, /HH:MM/],
     ['an unknown skill', { skill: 'plumbing' }, /Pick a skill/],
+    ['a day that does not exist', { date: '2026-02-30' }, /real date/],
   ])('refuses %s', async (_, patch, msg) => {
     expect((await outcome(addJob(slug, { ...job, ...patch }))).result).toMatchObject({ error: expect.stringMatching(msg) });
   });
@@ -104,5 +112,33 @@ describe('add job / add technician', () => {
     const other = await makeOrg('rival');
     const outsider = await addMember(other.id, 'member', 'outsider@example.test');
     expect(await outcome(addTech(slug, { ...tech, userId: outsider.id }))).toEqual({ nav: 'notFound', to: undefined });
+  });
+});
+
+describe('plan history (PR #2 review)', () => {
+  async function savedPlan() {
+    const ctx = await actAs(admin, slug);
+    const { savePlanIfValid } = await import('@/lib/dispatch/plan-store');
+    const { translatedGolden } = await import('./dispatch-db');
+    const r = await withOrg(ctx, async (tx) => savePlanIfValid(tx, ctx, await buildProblem(tx, orgId, seeded.date), translatedGolden('03-demo-day', seeded)));
+    expect(r.ok).toBe(true);
+  }
+  it('a tech or job with saved stops cannot be deleted out from under the plan', async () => {
+    await savedPlan();
+    const stop = (await db.planStop.findFirst({ where: { orgId } }))!;
+    await expect(db.technician.delete({ where: { id: stop.techId } })).rejects.toThrow();
+    await expect(db.job.delete({ where: { id: stop.jobId } })).rejects.toThrow();
+    expect(await db.planStop.count({ where: { orgId } })).toBe(24);
+  });
+  it('deleting the org still removes everything (cascade)', async () => {
+    await savedPlan();
+    await db.org.delete({ where: { id: orgId } });
+    expect(await db.planStop.count({ where: { orgId } })).toBe(0);
+    expect(await db.technician.count({ where: { orgId } })).toBe(0);
+  });
+  it('concurrent dispatch writes serialize on the org lock instead of failing', async () => {
+    const results = await Promise.all(['J01', 'J02', 'J03', 'J04'].map((ref) => outcome(pinJob(slug, { id: seeded.job.get(ref)!, techId: seeded.techByName.get('Tahlequah One')! }))));
+    expect(results.every((r) => 'nav' in r && r.nav === 'redirect')).toBe(true);
+    expect(await db.job.count({ where: { orgId, pinTechId: seeded.techByName.get('Tahlequah One')! } })).toBe(4);
   });
 });

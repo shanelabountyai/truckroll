@@ -10,6 +10,14 @@ import { dayOf } from './time';
 // The database side of planning (Phase 2): build a solver Problem from an org's day, and save a plan only after the
 // checker passed it (TR-02). Everything here runs inside the caller's withOrg transaction.
 
+/**
+ * The org's dispatch lock, held to the end of the caller's transaction. Every dispatch write takes it, so planDay's
+ * "did the day change while the solver ran?" re-read and its save are atomic against concurrent edits (D-28).
+ */
+export async function lockDispatch(tx: Tx, orgId: string): Promise<void> {
+  await tx.$queryRaw`SELECT 1 AS locked FROM (SELECT pg_advisory_xact_lock(hashtextextended(${`truckroll:dispatch:${orgId}`}, 0))) AS l`;
+}
+
 /** Jobs a plan covers: everything on the day not already underway or finished (re-plan freezing is Phase 3). */
 export const PLANNABLE = ['unscheduled', 'scheduled'] as const;
 

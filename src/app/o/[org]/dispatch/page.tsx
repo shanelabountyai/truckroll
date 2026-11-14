@@ -6,7 +6,7 @@ import { PRIORITIES, SKILLS, type Plan } from '@/lib/dispatch/contract';
 import type { PlanMetrics } from '@/lib/dispatch/metrics';
 import { currentPlan } from '@/lib/dispatch/plan-store';
 import { isDispatcher } from '@/lib/dispatch/roles';
-import { DATE_RE, dayOf, hhmm, todayIn } from '@/lib/dispatch/time';
+import { dayOf, hhmm, isRealDay, todayIn } from '@/lib/dispatch/time';
 import { addJob, addTech, pinJob, planDay, unpinJob } from './actions';
 import { TechTimeline, type StopJob } from './timeline';
 
@@ -20,7 +20,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
   const ctx = await requireOrg((await params).org);
   const q = await searchParams;
   const asked = typeof q.date === 'string' ? q.date : '';
-  const date = DATE_RE.test(asked) && !Number.isNaN(Date.parse(`${asked}T00:00:00Z`)) ? asked : todayIn();
+  const date = isRealDay(asked) ? asked : todayIn();
   if (!isDispatcher(ctx.role)) redirect(`/o/${ctx.slug}/dispatch/my-day?date=${date}`);
 
   const { techs, jobs, saved, members } = await withOrg(ctx, async (tx) => {
@@ -55,7 +55,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
       <ActionForm action={bind(planDay)}>
         <input type="hidden" name="date" value={date} />
         <button type="submit" disabled={!jobs.length || !techs.length}>Plan the day</button>{' '}
-        <small>Pinned jobs stay where they are pinned. Every plan is checked before it is saved.</small>
+        <small>A pinned job is only ever planned on its pinned tech (at its pinned position); if that can&apos;t work, it comes back unassigned with the reason. Every plan is checked before it is saved.</small>
       </ActionForm>
 
       <h2>Plan</h2>

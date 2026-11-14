@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { requireOrg } from '@/core/authz/guards';
 import { myDay } from '@/lib/dispatch/tech-day';
-import { DATE_RE, hhmm, todayIn } from '@/lib/dispatch/time';
+import { hhmm, isRealDay, todayIn } from '@/lib/dispatch/time';
 
 export const metadata = { title: 'My day' };
 
@@ -9,7 +9,7 @@ export const metadata = { title: 'My day' };
 export default async function MyDay({ params, searchParams }: { params: Promise<{ org: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await requireOrg((await params).org);
   const q = await searchParams;
-  const date = typeof q.date === 'string' && DATE_RE.test(q.date) && !Number.isNaN(Date.parse(`${q.date}T00:00:00Z`)) ? q.date : todayIn();
+  const date = typeof q.date === 'string' && isRealDay(q.date) ? q.date : todayIn();
   const { tech, stops, planId } = await myDay(ctx, date);
   return (
     <main style={{ maxWidth: 640 }}>

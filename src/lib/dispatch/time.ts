@@ -15,9 +15,16 @@ export function parseHHMM(s: string): number | null {
 
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+/** A real calendar day as YYYY-MM-DD. Round-trips through Date, because `Date.parse` rolls 2026-02-30 over to March 2. */
+export function isRealDay(date: string): boolean {
+  if (!DATE_RE.test(date)) return false;
+  const t = Date.parse(`${date}T00:00:00Z`);
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === date;
+}
+
 /** "2026-11-16" → the Date Prisma stores in a @db.Date column (UTC midnight). */
 export function dayOf(date: string): Date {
-  if (!DATE_RE.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) throw new Error(`not a date: ${date}`);
+  if (!isRealDay(date)) throw new Error(`not a date: ${date}`);
   return new Date(`${date}T00:00:00Z`);
 }
 

@@ -8,15 +8,16 @@ import { withOrg } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import { LUNCH_MINUTES, PRIORITIES, SKILLS } from '@/lib/dispatch/contract';
 import { DISPATCH } from '@/lib/dispatch/roles';
-import { buildProblem, savePlanIfValid } from '@/lib/dispatch/plan-store';
+import { buildProblem, lockDispatch, savePlanIfValid } from '@/lib/dispatch/plan-store';
 import { solveProblem, SolverUnavailable } from '@/lib/dispatch/solver-client';
-import { DATE_RE, dayOf, parseHHMM } from '@/lib/dispatch/time';
+import { DATE_RE, dayOf, isRealDay, parseHHMM } from '@/lib/dispatch/time';
 
 // The dispatcher board's writes (PRD §3, Phase 2). Dispatcher = owner or admin (D-25). Every id is a ref() so the
 // INV-01..04 harness drives these with cross-org ids; a tech or job outside the org is notFound, like a missing one.
+// Every write takes the org's dispatch lock first, so a plan is never saved over a day another write is changing (D-28).
 
 const board = (ctx: OrgCtx, date?: string) => `/o/${ctx.slug}/dispatch${date ? `?date=${date}` : ''}`;
-const date = z.string().trim().regex(DATE_RE, 'Pick a date.').refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)), 'Pick a real date.');
+const date = z.string().trim().regex(DATE_RE, 'Pick a date.').refine(isRealDay, 'Pick a real date.');
 // HH:MM from a form, or whole minutes from code and the harness.
 const clock = (label: string) =>
   z.union([z.number().int(), z.string().min(1, `${label}: use HH:MM.`)]).transform((v, c) => {
@@ -46,6 +47,7 @@ export const addJob = orgAction(
   async (ctx, i) => {
     if (i.windowEnd < i.windowStart) throw new Refused('The window ends before it starts.');
     await withOrg(ctx, async (tx) => {
+      await lockDispatch(tx, ctx.orgId);
       const exists = await tx.job.findFirst({ where: { ...inOrg(ctx), date: dayOf(i.date), ref: i.ref }, select: { id: true } });
       if (exists) throw new Refused(`Job ${i.ref} already exists on ${i.date}.`);
       const j = await tx.job.create({ data: { ...inOrg(ctx), ...i, date: dayOf(i.date) } });
@@ -72,6 +74,7 @@ export const addTech = orgAction(
   }),
   async (ctx, { date: d, userId, ...t }) => {
     await withOrg(ctx, async (tx) => {
+      await lockDispatch(tx, ctx.orgId);
       // The ref first: a member of another org is notFound before any other check can answer (INV-02/04).
       if (userId) {
         const m = await tx.membership.findUnique({ where: { orgId_userId: { orgId: ctx.orgId, userId } }, select: { role: true } });
@@ -93,12 +96,14 @@ export const pinJob = orgAction(
   z.object({ id: ref('job'), techId: ref('technician'), position: z.union([z.coerce.number().int().min(1, 'Position starts at 1.').max(50), z.literal('')]).optional() }),
   async (ctx, i) => {
     const d = await withOrg(ctx, async (tx) => {
+      await lockDispatch(tx, ctx.orgId);
       const [job, tech] = await Promise.all([
         tx.job.findFirst({ where: { ...inOrg(ctx), id: i.id }, select: { id: true, date: true, status: true, skill: true, ref: true } }),
         tx.technician.findFirst({ where: { ...inOrg(ctx), id: i.techId }, select: { id: true, skills: true, name: true } }),
       ]);
       if (!job || !tech) notFound();
       if (job.status !== 'unscheduled' && job.status !== 'scheduled') throw new Refused('That job is already underway.');
+      if (!tech.skills.includes(job.skill)) throw new Refused(`${tech.name} doesn't have the ${job.skill} skill job ${job.ref} needs.`);
       await tx.job.update({ where: { id: job.id }, data: { pinTechId: tech.id, pinPosition: i.position || null } });
       await audit(ctx, 'dispatch.job_pinned', { targetType: 'job', targetId: job.id, data: { techId: tech.id, position: i.position || null } }, tx);
       return job.date.toISOString().slice(0, 10);
@@ -109,6 +114,7 @@ export const pinJob = orgAction(
 
 export const unpinJob = orgAction(DISPATCH, z.object({ id: ref('job') }), async (ctx, i) => {
   const d = await withOrg(ctx, async (tx) => {
+    await lockDispatch(tx, ctx.orgId);
     const job = await tx.job.findFirst({ where: { ...inOrg(ctx), id: i.id }, select: { id: true, date: true } });
     if (!job) notFound();
     await tx.job.update({ where: { id: job.id }, data: { pinTechId: null, pinPosition: null } });
@@ -132,6 +138,7 @@ export const planDay = orgAction(DISPATCH, z.object({ date }), async (ctx, { dat
     throw e;
   }
   const result = await withOrg(ctx, async (tx) => {
+    await lockDispatch(tx, ctx.orgId); // no other dispatch write can change the day between this re-read and the commit
     const again = await buildProblem(tx, ctx.orgId, d);
     if (JSON.stringify(again) !== JSON.stringify(problem)) throw new Refused('Jobs changed while planning. Nothing was saved; plan again.');
     return savePlanIfValid(tx, ctx, problem, output);
