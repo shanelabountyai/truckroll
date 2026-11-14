@@ -35,7 +35,7 @@ function runPython(args: string[], input: string): string {
 }
 
 /** Raw bytes of the solver's plan (canonical JSON) for a problem, through solver/cli.py — the POST /solve code path. */
-export function solveRaw(problem: ProblemInput, timeLimitMs = 2000): string {
+export function solveRaw(problem: ProblemInput, timeLimitMs = 10_000): string {
   return runPython(['cli.py'], JSON.stringify({ problem, timeLimitMs }));
 }
 

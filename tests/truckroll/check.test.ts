@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { checkPlan, type CheckCode } from '@/lib/dispatch/check';
-import type { Plan } from '@/lib/dispatch/contract';
+import { LUNCH_MINUTES, Problem, type Job, type Plan, type Reason, type Route, type Tech } from '@/lib/dispatch/contract';
+import { driveMinutes } from '@/lib/dispatch/distance';
+import type { Fixture } from '../../scripts/truckroll/gen-fixtures';
 import { expectationFailures, fixtures, goldenPlan } from './helpers';
 
 // The oracle against committed golden plans (no Python needed), then planted defects: each must be caught by its code.
@@ -145,5 +147,105 @@ describe('checker catches planted defects', () => {
   it('garbage in → invalid-plan / invalid-problem, never a throw', () => {
     expect(codes(fx('01-single-job').problem, { nope: true } as unknown as Plan)).toEqual(['invalid-plan']);
     expect(checkPlan({ version: 2 }, goldenPlan('01-single-job')).errors.map((e) => e.code)).toEqual(['invalid-problem']);
+  });
+});
+
+// PR #1 review must-fix 2, with plans that are otherwise valid (empty routes, or the route re-timed without the job), so
+// only the unassigned verdicts can fail them: a made-up reason is `reason`, a false `over-capacity` is `droppable-job`.
+describe('checker rejects plans that drop jobs (otherwise-valid plans)', () => {
+  const DROP_CODES = ['droppable-job', 'reason'];
+  const REASONS = ['no-skill', 'no-window-fit', 'over-capacity'] as const;
+  /** Earliest-start timing of a stop order with lunch in gap `gap`, taken as early as allowed (PHASE1_PLAN "Model"). */
+  const timeRoute = (t: Tech, order: Job[], gap: number | null): Route => {
+    const s0 = t.start ?? { point: t.home, at: t.shiftStart };
+    let free = s0.at;
+    let pos = s0.point;
+    let lunch: Route['lunch'] = null;
+    const place = (d: number, ws: number | null) => {
+      const ls = Math.max(free, t.lunch.earliest, s0.at);
+      const arrival = ls <= free + d ? free + d + LUNCH_MINUTES : free + d;
+      let ready = ls > free + d ? Math.max(arrival, ls + LUNCH_MINUTES) : arrival;
+      if (ws !== null) ready = Math.max(ready, ws);
+      return { ls, arrival, ready };
+    };
+    const stops = order.map((j, i) => {
+      const d = driveMinutes(pos, j.location);
+      let arrival = free + d;
+      let start = Math.max(arrival, j.windowStart);
+      if (gap === i) {
+        const p = place(d, j.windowStart);
+        lunch = { start: p.ls, end: p.ls + LUNCH_MINUTES, afterSeq: i };
+        [arrival, start] = [p.arrival, p.ready];
+      }
+      free = start + j.durationMin;
+      pos = j.location;
+      return { jobId: j.id, seq: i + 1, driveMin: d, arrival, start, end: free, slackMin: start - arrival, lateMin: Math.max(0, start - j.windowEnd) };
+    });
+    const back = driveMinutes(pos, t.home);
+    let returnAt = free + back;
+    if (gap === order.length) {
+      const p = place(back, null);
+      lunch = { start: p.ls, end: p.ls + LUNCH_MINUTES, afterSeq: order.length };
+      returnAt = p.arrival;
+    }
+    return { techId: t.id, stops, lunch, returnDriveMin: back, returnAt };
+  };
+  const objectiveOf = (problem: Problem, routes: Plan['routes'], unassigned: Plan['unassigned']): Plan['objective'] => ({
+    unassignedEmergencies: unassigned.filter((u) => problem.jobs.find((j) => j.id === u.jobId)?.priority === 'emergency').length,
+    lateMin: routes.reduce((a, r) => a + r.stops.reduce((b, s) => b + s.lateMin, 0), 0),
+    driveMin: routes.reduce((a, r) => a + r.returnDriveMin + r.stops.reduce((b, s) => b + s.driveMin, 0), 0),
+  });
+  const dropAll = (f: Fixture, reason: Reason): Plan => {
+    const problem = Problem.parse(f.problem);
+    const routes = problem.techs.map((t) => ({ techId: t.id, stops: [], lunch: null, returnDriveMin: 0, returnAt: t.start?.at ?? t.shiftStart }));
+    const unassigned = problem.jobs.map((j) => ({ jobId: j.id, reasons: [reason] }));
+    return { version: 1, date: problem.date, routes, unassigned, objective: objectiveOf(problem, routes, unassigned), stoppedBy: 'local-optimum' };
+  };
+  /** The golden plan with one job taken off its route, re-timed so only the unassigned verdicts can be wrong. */
+  const dropOne = (f: Fixture, jobId: string, reason: Reason): Plan => {
+    const golden = goldenPlan(f.name);
+    const problem = Problem.parse(f.problem);
+    const jobs = new Map(problem.jobs.map((j) => [j.id, j]));
+    const r = golden.routes.find((x) => x.stops.some((s) => s.jobId === jobId))!;
+    const t = problem.techs.find((x) => x.id === r.techId)!;
+    const order = r.stops.filter((s) => s.jobId !== jobId).map((s) => jobs.get(s.jobId)!);
+    for (const g of order.length ? [...order.keys(), order.length] : [null]) {
+      const routes = golden.routes.map((y) => (y.techId === t.id ? timeRoute(t, order, g) : y));
+      const unassigned = [...golden.unassigned, { jobId, reasons: [reason] }];
+      const plan: Plan = { ...golden, routes, unassigned, objective: objectiveOf(problem, routes, unassigned) };
+      if (checkPlan(f.problem, plan).errors.every((e) => DROP_CODES.includes(e.code))) return plan;
+    }
+    throw new Error(`could not re-time ${t.id} without ${jobId}`);
+  };
+  const verdict = (f: Fixture, plan: Plan, jobId: string) => {
+    const res = checkPlan(f.problem, plan);
+    return { ok: res.ok, onlyDropCodes: res.errors.every((e) => DROP_CODES.includes(e.code)), jobFlagged: res.errors.some((e) => e.jobId === jobId) };
+  };
+
+  it.each(REASONS)('every demo-day job dropped as %s → rejected, each job flagged, nothing else wrong', (reason) => {
+    const f = fx('03-demo-day');
+    const res = checkPlan(f.problem, dropAll(f, reason));
+    expect(res.ok).toBe(false);
+    expect(res.errors.every((e) => DROP_CODES.includes(e.code))).toBe(true);
+    expect(new Set(res.errors.map((e) => e.jobId)).size).toBe(f.problem.jobs.length);
+  });
+
+  it.each(REASONS)('an emergency dropped although it fits, claimed %s → rejected', (reason) => {
+    const f = fx('05-emergency-first');
+    const golden = goldenPlan(f.name);
+    const em = golden.routes.flatMap((r) => r.stops).map((s) => f.problem.jobs.find((j) => j.id === s.jobId)!).find((j) => j.priority === 'emergency')!;
+    const plan = dropOne(f, em.id, reason);
+    expect(plan.objective.unassignedEmergencies).toBe(golden.objective.unassignedEmergencies + 1);
+    expect(verdict(f, plan, em.id)).toEqual({ ok: false, onlyDropCodes: true, jobFlagged: true });
+  });
+
+  it.each(REASONS)('a pinned job dropped with a made-up %s → rejected', (reason) => {
+    const f = fx('11-pinned-job');
+    const pinned = f.problem.jobs.find((j) => j.pin)!;
+    expect(verdict(f, dropOne(f, pinned.id, reason), pinned.id)).toEqual({ ok: false, onlyDropCodes: true, jobFlagged: true });
+  });
+
+  it('control: the golden over-capacity plan still passes', () => {
+    expect(checkPlan(fx('10-over-capacity').problem, goldenPlan('10-over-capacity')).errors).toEqual([]);
   });
 });

@@ -83,3 +83,40 @@ def test_a_clock_cut_search_returns_no_plan_tr04(monkeypatch):
     res = TestClient(app).post("/solve", json={"problem": fx["problem"], "timeLimitMs": 2000})
     assert res.status_code == 503
     assert res.json()["error"] == "time-limit"
+
+
+# ---- TR-04 with a real cap that bites (no faked clock) ----
+
+def _demo(limit: int) -> SolveRequest:
+    from conftest import FIXTURES, load
+
+    fx = load(next(p for p in FIXTURES if p.stem == "03-demo-day"))
+    return SolveRequest.model_validate({"problem": fx["problem"], "timeLimitMs": limit})
+
+
+def test_a_low_real_cap_gives_the_same_plan_or_no_plan_never_another_plan_tr04():
+    ref = plan_json(solve(_demo(60_000)))
+    for limit in (100, 100, 250, 500, 1000):
+        try:
+            got = plan_json(solve(_demo(limit)))
+        except TimeLimitExceeded:
+            continue
+        assert got == ref
+    with pytest.raises(TimeLimitExceeded):  # 100 ms is far below the demo day's work budget on any machine we run on
+        solve(_demo(100))
+
+
+def test_plan_has_no_wall_clock_field():
+    plan = solve(_demo(60_000))
+    assert plan["stoppedBy"] in ("solution-limit", "local-optimum")
+    assert set(plan) == {"date", "objective", "routes", "stoppedBy", "unassigned", "version"}
+
+
+def test_no_solution_from_the_model_still_gives_honest_reasons(monkeypatch):
+    """If OR-Tools returns nothing, the repair pass routes what fits instead of calling every job over-capacity."""
+    import solve as solve_module
+
+    monkeypatch.setattr(solve_module, "_model_solve", lambda p, eligible, ms: (None, "local-optimum"))
+    plan = solve_module.solve(_demo(60_000))
+    assert plan["unassigned"] == []  # the demo day has room for everything
+    assert sum(len(r["stops"]) for r in plan["routes"]) == 24
