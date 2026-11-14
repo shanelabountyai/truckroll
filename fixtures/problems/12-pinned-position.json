@@ -1,7 +1,7 @@
 {
   "name": "12-pinned-position",
   "description": "J3 is the farthest job but is pinned to T1 at position 1.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

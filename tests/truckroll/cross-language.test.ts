@@ -12,7 +12,7 @@ describe.skipIf(skipWithoutSolver)('cross-language: solver → checker', () => {
     const res = checkPlan(f.problem, plan);
     expect(res.errors).toEqual([]);
     expect(expectationFailures(f.expect, plan)).toEqual([]);
-    expect(plan.stoppedBy).not.toBe('time-limit');
+    expect(['local-optimum', 'solution-limit', 'trivial']).toContain(plan.stoppedBy);
   });
 
   it.each(fixtures.map((f) => [f.name, f]))('%s: TS and Python drive matrices agree to the minute', (_, f) => {

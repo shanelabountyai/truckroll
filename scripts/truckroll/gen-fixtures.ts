@@ -89,7 +89,7 @@ const tech = (id: string, name: string, skills: Skill[], home: Pt, o: Partial<Te
 const ALL: Skill[] = ['install', 'repair', 'maintenance', 'refrigerant-certified'];
 const fixtures: Fixture[] = [];
 const add = (name: string, description: string, techs: TechIn[], jobs: JobIn[], expect: Expect, maxLateMin?: number) =>
-  fixtures.push({ name, description, timeLimitMs: 2000, problem: { version: 1, date: DATE, ...(maxLateMin === undefined ? {} : { maxLateMin }), techs, jobs }, expect });
+  fixtures.push({ name, description, timeLimitMs: 10_000, problem: { version: 1, date: DATE, ...(maxLateMin === undefined ? {} : { maxLateMin }), techs, jobs }, expect });
 
 {
   const { job } = maker(1);

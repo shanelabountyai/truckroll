@@ -126,7 +126,8 @@ export const Plan = z
     objective: z
       .object({ unassignedEmergencies: z.number().int().min(0), lateMin: z.number().int().min(0), driveMin: z.number().int().min(0) })
       .strict(),
-    stoppedBy: z.enum(['solution-limit', 'local-optimum', 'time-limit', 'trivial']),
+    // No 'time-limit': a clock-cut search returns no plan (D-18).
+    stoppedBy: z.enum(['solution-limit', 'local-optimum', 'trivial']),
   })
   .strict();
 export type Plan = z.infer<typeof Plan>;

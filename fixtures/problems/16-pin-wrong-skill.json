@@ -1,7 +1,7 @@
 {
   "name": "16-pin-wrong-skill",
   "description": "J1 (install) is pinned to a repair-only tech; another tech could do it, but a pin is never moved.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

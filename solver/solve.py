@@ -19,6 +19,10 @@ from distance import drive_minutes
 DAY = 24 * 60
 
 
+class TimeLimitExceeded(Exception):
+    """The search hit timeLimitMs. No plan is returned: a clock-cut search is not reproducible (TR-04, D-18)."""
+
+
 # ---------- timing model (shared by the pre-check and normalisation) ----------
 
 def _travel(free_at: int, drive: int, lunch_start: Optional[int]) -> int:
@@ -194,8 +198,8 @@ def _model_solve(p: Problem, eligible: list[Job], time_limit_ms: int):
     sol = routing.SolveWithParameters(params)
     elapsed_ms = (time.monotonic() - t0) * 1000
     if elapsed_ms >= time_limit_ms:
-        stopped = "time-limit"
-    elif routing.solver().Solutions() >= objective.SOLUTION_LIMIT:
+        raise TimeLimitExceeded(f"search hit the {time_limit_ms} ms limit")
+    if routing.solver().Solutions() >= objective.SOLUTION_LIMIT:
         stopped = "solution-limit"
     else:
         stopped = "local-optimum"

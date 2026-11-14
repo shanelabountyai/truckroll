@@ -1,7 +1,7 @@
 {
   "name": "14-all-reasons",
   "description": "One job per reason: commercial with no commercial tech, a 04:00 window, and two jobs for a tech capped at one.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

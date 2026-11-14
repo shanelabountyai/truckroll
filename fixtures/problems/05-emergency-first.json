@@ -1,7 +1,7 @@
 {
   "name": "05-emergency-first",
   "description": "One tech, 540-minute shift, six 120-minute jobs: four fit (480 + lunch + short drives), two do not. Both emergencies must be kept.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

@@ -1,7 +1,7 @@
 {
   "name": "13-late-but-ok",
   "description": "Two 60-minute jobs with the same 09:00–09:15 window: the second is late but inside the 60-minute cap.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

@@ -1,5 +1,6 @@
 import { LUNCH_MINUTES, Plan, Problem, type Job, type Point, type Route, type Tech } from './contract';
 import { driveMinutes } from './distance';
+import { insertionFor, standaloneReason } from './feasibility';
 import { computeMetrics, type PlanMetrics } from './metrics';
 
 // The oracle (PRD §5, D-03): validates any plan against its problem without trusting the solver. Recomputes every
@@ -29,6 +30,7 @@ export type CheckCode =
   | 'pin-tech'
   | 'pin-position'
   | 'reason'
+  | 'droppable-job'
   | 'objective-mismatch';
 
 export interface CheckError {
@@ -95,12 +97,20 @@ export function checkPlan(problemInput: unknown, planInput: unknown): CheckResul
     driveTotal += totals.drive;
   }
 
+  // Every unassigned job must carry the one true reason, and an `over-capacity` job must really not fit: if it could be
+  // added to some route at some position without breaking it, the plan dropped work it could have done.
+  const routeJobs = new Map(plan.routes.map((r) => [r.techId, r.stops.map((s) => jobs.get(s.jobId)).filter((j): j is Job => !!j)]));
   for (const u of plan.unassigned) {
     const j = jobs.get(u.jobId);
     if (!j) continue;
-    if (u.reasons.includes('no-skill')) {
-      const candidates = j.pin ? [techs.get(j.pin.techId)!] : problem.techs;
-      if (candidates.some((t) => t.skills.includes(j.skill))) err('reason', `job ${j.id} says no-skill but a tech has ${j.skill}`, { jobId: j.id });
+    const expected = standaloneReason(problem, j) ?? 'over-capacity';
+    if (u.reasons.length !== 1 || u.reasons[0] !== expected) {
+      err('reason', `job ${j.id} says ${u.reasons.join(', ')}; the problem says ${expected}`, { jobId: j.id });
+      continue;
+    }
+    if (expected === 'over-capacity') {
+      const fit = insertionFor(problem, j, routeJobs);
+      if (fit) err('droppable-job', `job ${j.id} is unassigned but fits on ${fit.techId} at #${fit.position}`, { jobId: j.id, techId: fit.techId });
     }
   }
 

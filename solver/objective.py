@@ -10,5 +10,5 @@ LATE_PER_MIN = 1_000
 DRIVE_PER_MIN = 1
 
 # Search stop (D-18): greedy descent to a local optimum, bounded by a solution count — never the clock — so the same
-# input gives the same plan. timeLimitMs is only a safety cap; a plan that hit it says stoppedBy "time-limit".
+# input gives the same plan. timeLimitMs is only a safety cap: a search that hits it returns no plan (503 / exit 3).
 SOLUTION_LIMIT = 2000

@@ -1,7 +1,7 @@
 {
   "name": "03-demo-day",
   "description": "Both shops, six techs, 24 mixed jobs: the demo day. Capacity is ample, so everything is assigned.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

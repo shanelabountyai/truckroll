@@ -105,6 +105,43 @@ describe('checker catches planted defects', () => {
     expect(codes(f.problem, plan)).toContain('reason');
   });
 
+  // PR #1 review, must-fix 2: a plan that drops work it could have done must not pass.
+  it('dropping every job of the demo day with a made-up reason → droppable-job / reason, never ok', () => {
+    const f = fx('03-demo-day');
+    const plan = clone(goldenPlan(f.name));
+    const all = plan.routes.flatMap((r) => r.stops.map((s) => s.jobId));
+    for (const r of plan.routes) {
+      r.stops = [];
+      r.lunch = null;
+      r.returnDriveMin = 0;
+      r.returnAt = r.techId ? f.problem.techs.find((t) => t.id === r.techId)!.shiftStart : 0;
+    }
+    plan.unassigned = all.map((jobId, i) => ({ jobId, reasons: [i % 2 ? 'over-capacity' : 'no-window-fit'] }));
+    plan.objective = { unassignedEmergencies: f.problem.jobs.filter((j) => j.priority === 'emergency').length, lateMin: 0, driveMin: 0 };
+    const res = checkPlan(f.problem, plan);
+    expect(res.ok).toBe(false);
+    const byCode = (c: CheckCode) => res.errors.filter((e) => e.code === c).length;
+    expect(byCode('droppable-job') + byCode('reason')).toBe(all.length); // every dropped job is called out
+  });
+
+  it('a pinned job dropped as over-capacity when its tech has room → droppable-job', () => {
+    const f = fx('11-pinned-job');
+    const plan = clone(goldenPlan(f.name));
+    const q = plan.routes.find((r) => r.techId === 'Q1')!;
+    const idx = q.stops.findIndex((s) => s.jobId === 'J1');
+    // The route's times no longer line up after the splice either (other codes); the point here is J1's own verdict.
+    q.stops.splice(idx, 1);
+    plan.unassigned.push({ jobId: 'J1', reasons: ['over-capacity'] });
+    expect(codes(f.problem, plan)).toContain('droppable-job');
+  });
+
+  it('the wrong reason for a job no one can do alone → reason', () => {
+    const f = fx('09-impossible-window');
+    const plan = clone(goldenPlan(f.name));
+    plan.unassigned[0]!.reasons = ['over-capacity'];
+    expect(codes(f.problem, plan)).toContain('reason');
+  });
+
   it('garbage in → invalid-plan / invalid-problem, never a throw', () => {
     expect(codes(fx('01-single-job').problem, { nope: true } as unknown as Plan)).toEqual(['invalid-plan']);
     expect(checkPlan({ version: 2 }, goldenPlan('01-single-job')).errors.map((e) => e.code)).toEqual(['invalid-problem']);
