@@ -20,6 +20,28 @@ DAY = 24 * 60
 PRIORITY_RANK = {"emergency": 0, "standard": 1, "maintenance": 2}
 
 
+class PinConflict(Exception):
+    """D-37 (Shane, 2026-11-14): pinned jobs are never dropped or moved. When the pins can't all be honoured there is no
+    plan; the solve fails with this instead, naming every pin at fault as {"code", "jobId", "techId"}. Codes, in the
+    order they are judged (src/lib/dispatch/pins.ts mirrors this, and the checker re-derives it):
+      no-skill               the pinned tech lacks the job's skill
+      position-over-capacity the pinned position is past the tech's maxJobs
+      no-window-fit          the pinned tech can't do the job alone inside its window, shift and lunch
+      position-taken         two or more jobs are pinned to the same position on the same tech
+      over-capacity          more jobs are pinned to the tech than its maxJobs
+      infeasible-together    each pin is fine alone, but no route for the tech holds all its pins (at their positions)
+      search-limit           the tech's pins could not be settled within PIN_SEARCH_LIMIT route prefixes
+    The last two are judged only when none of the others applies anywhere. POST /solve answers 422; cli.py exits 4.
+    """
+
+    def __init__(self, pins: list[dict]):
+        self.pins = pins
+        super().__init__("pins can't all be honoured: " + ", ".join(f"{x['jobId']} on {x['techId']} ({x['code']})" for x in pins))
+
+    def body(self) -> dict:
+        return {"detail": str(self), "error": "pin-conflict", "pins": self.pins}
+
+
 class TimeLimitExceeded(Exception):
     """The search hit timeLimitMs. No plan is returned: a clock-cut search is not reproducible (TR-04, D-18)."""
 
@@ -50,7 +72,7 @@ def _single_job_fits(p: Problem, t: Tech, j: Job) -> bool:
     s = t.route_start()
     d_in = drive_minutes(s.point, j.location)
     d_out = drive_minutes(j.location, t.home)
-    latest_start = j.windowEnd + p.maxLateMin
+    latest_start = j.windowEnd  # D-36: no lateness
     if not t.lunch_required():
         start = max(s.at + d_in, j.windowStart)
         return start <= latest_start and start + j.durationMin + d_out <= t.shiftEnd
@@ -67,12 +89,12 @@ def _single_job_fits(p: Problem, t: Tech, j: Job) -> bool:
 
 
 def precheck(p: Problem) -> dict[str, list[str]]:
-    """Reason codes for jobs no tech could ever do (never sent to the solver)."""
+    """Reason codes for unpinned jobs no tech could ever do (never sent to the solver). Pins: pin_conflicts (D-37)."""
     out: dict[str, list[str]] = {}
-    techs = {t.id: t for t in p.techs}
     for j in p.jobs:
-        candidates = [techs[j.pin.techId]] if j.pin else p.techs
-        skilled = [t for t in candidates if j.skill in t.skills]
+        if j.pin:
+            continue
+        skilled = [t for t in p.techs if j.skill in t.skills]
         if not skilled:
             out[j.id] = ["no-skill"]
         elif not any(_single_job_fits(p, t, j) for t in skilled):
@@ -108,7 +130,7 @@ def _route(p: Problem, t: Tech, jobs: list[Job], lunch_gap: Optional[int]) -> Op
         home = free_at + back
         finish = home
     route = {"lunch": lunch_out, "returnAt": home, "returnDriveMin": back, "stops": stops, "techId": t.id}
-    ok = finish <= t.shiftEnd and all(st["lateMin"] <= p.maxLateMin for st in stops)
+    ok = finish <= t.shiftEnd and all(st["lateMin"] == 0 for st in stops)  # D-36: no lateness
     if lunch_out and lunch_out["start"] > t.lunch.latest:
         ok = False
     return route if ok else None
@@ -123,6 +145,98 @@ def _best_lunch_gap(p: Problem, t: Tech, jobs: list[Job], solver_gap: Optional[i
         if r:
             return r
     return None
+
+
+# ---------- pins (D-37): judged before the search, never relaxed ----------
+
+PIN_SEARCH_LIMIT = 100_000  # route prefixes tried per tech before `search-limit` (a count, never the clock: TR-04)
+
+
+def _pin_skeleton(p: Problem, t: Tech, pins: list[Job], fillers: list[Job]):
+    """The first route, in a fixed search order, for tech t that holds all its pins, each at its pinned position, with
+    the fewest stops: max(highest pinned position, number of pins). A slot before a pinned position that no pin fills
+    takes an unpinned job (`fillers`). Fewest is enough: an extra stop never makes a later stop earlier (durations are
+    >= 1 min and a detour's ceil'd drive minutes are never shorter). A prefix whose earliest-start timeline, without
+    lunch, starts a stop after its window is cut (lunch only delays). Returns the job sequence, None if there is no such
+    route, or "limit" after PIN_SEARCH_LIMIT prefixes. Mirrored by skeleton() in src/lib/dispatch/pins.ts."""
+    at = {j.pin.position: j for j in pins if j.pin.position is not None}
+    free_pins = sorted((j for j in pins if j.pin.position is None), key=lambda j: j.id)
+    fillers = sorted((f for f in fillers if f.skill in t.skills), key=lambda j: j.id)
+    n = max([len(pins)] + list(at))
+    s0 = t.route_start()
+    budget = [PIN_SEARCH_LIMIT]
+
+    def dfs(seq: list[Job], free: int, pos: Point, left: list[Job], used: set[str]):
+        if len(seq) == n:
+            ok = len(seq) <= t.maxJobs and _best_lunch_gap(p, t, seq, None) is not None
+            return list(seq) if ok else None
+        budget[0] -= 1
+        if budget[0] < 0:
+            return "limit"
+        k = len(seq) + 1
+        open_slots = sum(1 for q in range(k, n + 1) if q not in at)
+        if k in at:
+            options = [at[k]]
+        else:
+            options = list(left) + ([f for f in fillers if f.id not in used] if open_slots - 1 >= len(left) else [])
+        for j in options:
+            if j.skill not in t.skills:
+                continue
+            start = max(free + drive_minutes(pos, j.location), j.windowStart)
+            if start > j.windowEnd:
+                continue
+            res = dfs(seq + [j], start + j.durationMin, j.location, [x for x in left if x.id != j.id],
+                      used if j.pin else used | {j.id})
+            if res is not None:
+                return res
+        return None
+
+    return dfs([], s0.at, s0.point, free_pins, set())
+
+
+def pin_conflicts(p: Problem) -> tuple[list[dict], dict[str, list[Job]]]:
+    """(conflicts, skeletons): every pin at fault (D-37); with none, one route per pinned tech that holds all its pins.
+    Techs are taken in problem order and a filler used by one tech's skeleton is not offered to the next, so the
+    skeletons together are a valid set of routes."""
+    techs = {t.id: t for t in p.techs}
+    out: list[dict] = []
+    pinned = [j for j in p.jobs if j.pin]
+    for j in pinned:
+        t = techs[j.pin.techId]
+        skilled = j.skill in t.skills
+        if not skilled:
+            out.append({"code": "no-skill", "jobId": j.id, "techId": t.id})
+        if j.pin.position is not None and j.pin.position > t.maxJobs:
+            out.append({"code": "position-over-capacity", "jobId": j.id, "techId": t.id})
+        if skilled and t.maxJobs >= 1 and not _single_job_fits(p, t, j):
+            out.append({"code": "no-window-fit", "jobId": j.id, "techId": t.id})
+    for t in p.techs:
+        mine = [j for j in pinned if j.pin.techId == t.id]
+        by_pos: dict[int, list[Job]] = {}
+        for j in mine:
+            if j.pin.position is not None:
+                by_pos.setdefault(j.pin.position, []).append(j)
+        for q in sorted(by_pos):
+            if len(by_pos[q]) > 1:
+                out += [{"code": "position-taken", "jobId": j.id, "techId": t.id} for j in by_pos[q]]
+        if len(mine) > t.maxJobs:
+            out += [{"code": "over-capacity", "jobId": j.id, "techId": t.id} for j in mine]
+    if out:
+        return out, {}
+    skeletons: dict[str, list[Job]] = {}
+    used: set[str] = set()
+    for t in p.techs:
+        mine = [j for j in pinned if j.pin.techId == t.id]
+        if not mine:
+            continue
+        res = _pin_skeleton(p, t, mine, [j for j in p.jobs if not j.pin and j.id not in used])
+        if res is None or res == "limit":
+            code = "search-limit" if res == "limit" else "infeasible-together"
+            out += [{"code": code, "jobId": j.id, "techId": t.id} for j in mine]
+            continue
+        skeletons[t.id] = res
+        used |= {j.id for j in res if not j.pin}
+    return out, ({} if out else skeletons)
 
 
 # ---------- the routing model ----------
@@ -162,16 +276,18 @@ def _model_solve(p: Problem, eligible: list[Job], time_limit_ms: int):
     tech_index = {t.id: v for v, t in enumerate(techs)}
     for n, j in enumerate(eligible):
         idx = manager.NodeToIndex(n)
-        tdim.CumulVar(idx).SetRange(j.windowStart, j.windowEnd + p.maxLateMin)
-        tdim.SetCumulVarSoftUpperBound(idx, j.windowEnd, objective.LATE_PER_MIN)
+        tdim.CumulVar(idx).SetRange(j.windowStart, j.windowEnd)  # D-36: a hard window, no lateness
         if j.pin:
             allowed = [tech_index[j.pin.techId]]
             if j.pin.position is not None:
                 cdim.CumulVar(idx).SetValue(j.pin.position - 1)
         else:
             allowed = [v for v, t in enumerate(techs) if j.skill in t.skills]
-        routing.VehicleVar(idx).SetValues([-1] + allowed)
-        routing.AddDisjunction([idx], objective.DROP_PINNED if j.pin else objective.DROP[j.priority])
+        if j.pin:  # D-37: mandatory (no disjunction); pin_conflicts has shown a route holding every pin exists
+            routing.VehicleVar(idx).SetValues(allowed)
+        else:
+            routing.VehicleVar(idx).SetValues([-1] + allowed)
+            routing.AddDisjunction([idx], objective.DROP[j.priority])
 
     solver = routing.solver()
     visit = [service[manager.IndexToNode(i)] for i in range(routing.Size())]
@@ -237,7 +353,8 @@ def _model_solve(p: Problem, eligible: list[Job], time_limit_ms: int):
 
 
 def _insertions(p: Problem, t: Tech, seq: list[Job], j: Job):
-    """Every feasible route with j inserted into t's sequence (pins, maxJobs, windows, shift, lunch all honoured)."""
+    """Every feasible route with j inserted into t's sequence (pins, maxJobs, windows, shift, lunch all honoured).
+    Never before a stop pinned to its position, so a pinned position never moves."""
     if j.skill not in t.skills or (j.pin and j.pin.techId != t.id) or len(seq) + 1 > t.maxJobs:
         return
     for k in range(len(seq) + 1):
@@ -254,7 +371,7 @@ def _insertions(p: Problem, t: Tech, seq: list[Job], j: Job):
 def _repair(p: Problem, eligible: list[Job], seqs: dict[str, list[Job]], built: dict[str, dict]) -> None:
     """Insert every unrouted job that still fits somewhere, so `over-capacity` is only ever said of a job that cannot be
     added to any route of the returned plan (the checker re-derives this, D-03). Most important jobs first; the
-    cheapest insertion (lateness, then drive) wins; ties go to tech order, then position. Deterministic."""
+    cheapest insertion by drive wins (no lateness since D-36); ties go to tech order, then position. Deterministic."""
     order = sorted(eligible, key=lambda j: (0 if j.pin else 1, PRIORITY_RANK[j.priority], j.id))
     changed = True
     while changed:
@@ -266,12 +383,10 @@ def _repair(p: Problem, eligible: list[Job], seqs: dict[str, list[Job]], built: 
             best = None
             for ti, t in enumerate(p.techs):
                 before = built[t.id]
-                base_late = sum(st["lateMin"] for st in before["stops"])
                 base_drive = before["returnDriveMin"] + sum(st["driveMin"] for st in before["stops"])
                 for k, new, r in _insertions(p, t, seqs[t.id], j):
-                    late = sum(st["lateMin"] for st in r["stops"]) - base_late
                     drive = r["returnDriveMin"] + sum(st["driveMin"] for st in r["stops"]) - base_drive
-                    key = (late, drive, ti, k)
+                    key = (drive, ti, k)
                     if best is None or key < best[0]:
                         best = (key, t, new, r)
             if best is not None:
@@ -283,19 +398,27 @@ def _repair(p: Problem, eligible: list[Job], seqs: dict[str, list[Job]], built: 
 
 def solve(req: SolveRequest) -> dict:
     p = req.problem
+    conflicts, skeletons = pin_conflicts(p)
+    if conflicts:
+        raise PinConflict(conflicts)  # D-37: never a plan that drops or moves a pin
     reasons = precheck(p)
     eligible = [j for j in p.jobs if j.id not in reasons]
     stopped_by = "trivial"
     assignments: list[tuple[Tech, list[Job], Optional[int]]] = [(t, [], None) for t in p.techs]
+    use_skeletons = bool(skeletons)  # until the model gives routes that hold every pin
     if eligible and p.techs:
         res, stopped_by = _model_solve(p, eligible, req.timeLimitMs)
         if res is not None:
             assignments = res
+            use_skeletons = False
 
     seqs: dict[str, list[Job]] = {}
     built: dict[str, dict] = {}
     for t, seq, gap in assignments:
         r = _best_lunch_gap(p, t, seq, gap)
+        if r is None and any(j.pin for j in seq):
+            use_skeletons = True  # never drop or move a pin to make a route fit
+            break
         while r is None and seq:  # defensive: never emit a plan the checker would reject; drop from the end
             seq = seq[:-1]
             r = _best_lunch_gap(p, t, seq, None)
@@ -303,6 +426,11 @@ def solve(req: SolveRequest) -> dict:
             seq = []
             r = _best_lunch_gap(p, t, [], None)
         seqs[t.id], built[t.id] = seq, r
+    if use_skeletons:
+        # No model solution, or one that would cost a pin: start over from the routes pin_conflicts proved, which hold
+        # every pin at its position; the repair pass then adds everything else that fits.
+        seqs = {t.id: list(skeletons.get(t.id, [])) for t in p.techs}
+        built = {t.id: _best_lunch_gap(p, t, seqs[t.id], None) for t in p.techs}
     _repair(p, eligible, seqs, built)
     routes = [built[t.id] for t in p.techs]
     routed = {s["jobId"] for r in routes for s in r["stops"]}

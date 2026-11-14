@@ -1,6 +1,6 @@
 {
-  "name": "13-late-but-ok",
-  "description": "Two 60-minute jobs with the same 09:00–09:15 window: the second is late but inside the 60-minute cap.",
+  "name": "13-would-be-late",
+  "description": "Two 60-minute jobs with the same 09:00–09:15 window and one tech: either fits alone, but the second would start after 09:15, so it is unassigned (over-capacity, which the checker verifies) instead of late (D-36).",
   "timeLimitMs": 10000,
   "problem": {
     "version": 1,
@@ -57,14 +57,11 @@
     ]
   },
   "expect": {
-    "assigned": [
-      "J1",
-      "J2"
-    ],
-    "unassigned": {},
+    "unassignedCounts": {
+      "over-capacity": 1
+    },
     "lateMin": {
-      "min": 1,
-      "max": 60
+      "max": 0
     }
   }
 }

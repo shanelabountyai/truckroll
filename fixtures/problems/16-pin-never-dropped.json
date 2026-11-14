@@ -1,6 +1,6 @@
 {
-  "name": "16-pin-wrong-skill",
-  "description": "J1 (install) is pinned to a repair-only tech; another tech could do it, but a pin is never moved.",
+  "name": "16-pin-never-dropped",
+  "description": "T1 takes one job and the maintenance job J1 is pinned to T1: a pin is never dropped (D-37), so the emergency E1 is the one left unassigned (over-capacity). (A pin that cannot be honoured is a pin-conflict, not a plan: tests/truckroll/pins.test.ts.)",
   "timeLimitMs": 10000,
   "problem": {
     "version": 1,
@@ -8,9 +8,10 @@
     "techs": [
       {
         "id": "T1",
-        "name": "Tech Repair",
+        "name": "Tech Alpha",
         "skills": [
-          "repair"
+          "repair",
+          "maintenance"
         ],
         "shiftStart": 480,
         "shiftEnd": 1020,
@@ -22,25 +23,7 @@
           "earliest": 690,
           "latest": 780
         },
-        "maxJobs": 8
-      },
-      {
-        "id": "T2",
-        "name": "Tech Install",
-        "skills": [
-          "install"
-        ],
-        "shiftStart": 480,
-        "shiftEnd": 1020,
-        "home": {
-          "lat": 35.7479,
-          "lng": -95.3697
-        },
-        "lunch": {
-          "earliest": 690,
-          "latest": 780
-        },
-        "maxJobs": 8
+        "maxJobs": 1
       }
     ],
     "jobs": [
@@ -55,14 +38,14 @@
         "windowStart": 480,
         "windowEnd": 960,
         "durationMin": 60,
-        "priority": "standard",
-        "skill": "install",
+        "priority": "maintenance",
+        "skill": "maintenance",
         "pin": {
           "techId": "T1"
         }
       },
       {
-        "id": "J2",
+        "id": "E1",
         "customer": "Customer 16-002",
         "address": "3428 Example Rd, Synthetic OK",
         "location": {
@@ -72,18 +55,18 @@
         "windowStart": 480,
         "windowEnd": 960,
         "durationMin": 60,
-        "priority": "standard",
+        "priority": "emergency",
         "skill": "repair"
       }
     ]
   },
   "expect": {
     "assigned": [
-      "J2"
+      "J1"
     ],
     "unassigned": {
-      "J1": [
-        "no-skill"
+      "E1": [
+        "over-capacity"
       ]
     }
   }

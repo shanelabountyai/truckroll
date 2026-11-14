@@ -10,6 +10,42 @@ const fx = (name: string) => fixtures.find((f) => f.name === name)!;
 const clone = (p: Plan): Plan => structuredClone(p);
 const codes = (problem: unknown, plan: Plan) => checkPlan(problem, plan).errors.map((e) => e.code);
 
+/** Earliest-start timing of a stop order with lunch in gap `gap`, taken as early as allowed (PHASE1_PLAN "Model"). */
+const timeRoute = (t: Tech, order: Job[], gap: number | null): Route => {
+  const s0 = t.start ?? { point: t.home, at: t.shiftStart };
+  let free = s0.at;
+  let pos = s0.point;
+  let lunch: Route['lunch'] = null;
+  const place = (d: number, ws: number | null) => {
+    const ls = Math.max(free, t.lunch.earliest, s0.at);
+    const arrival = ls <= free + d ? free + d + LUNCH_MINUTES : free + d;
+    let ready = ls > free + d ? Math.max(arrival, ls + LUNCH_MINUTES) : arrival;
+    if (ws !== null) ready = Math.max(ready, ws);
+    return { ls, arrival, ready };
+  };
+  const stops = order.map((j, i) => {
+    const d = driveMinutes(pos, j.location);
+    let arrival = free + d;
+    let start = Math.max(arrival, j.windowStart);
+    if (gap === i) {
+      const p = place(d, j.windowStart);
+      lunch = { start: p.ls, end: p.ls + LUNCH_MINUTES, afterSeq: i };
+      [arrival, start] = [p.arrival, p.ready];
+    }
+    free = start + j.durationMin;
+    pos = j.location;
+    return { jobId: j.id, seq: i + 1, driveMin: d, arrival, start, end: free, slackMin: start - arrival, lateMin: Math.max(0, start - j.windowEnd) };
+  });
+  const back = driveMinutes(pos, t.home);
+  let returnAt = free + back;
+  if (gap === order.length) {
+    const p = place(back, null);
+    lunch = { start: p.ls, end: p.ls + LUNCH_MINUTES, afterSeq: order.length };
+    returnAt = p.arrival;
+  }
+  return { techId: t.id, stops, lunch, returnDriveMin: back, returnAt };
+};
+
 describe('checker on golden plans', () => {
   it.each(fixtures.map((f) => [f.name, f]))('%s passes and meets its expectations', (_, f) => {
     const plan = goldenPlan(f.name);
@@ -95,9 +131,30 @@ describe('checker catches planted defects', () => {
     expect(codes(problem, goldenPlan(f.name))).toContain('shift-end');
   });
 
-  it('lateness over the cap → too-late', () => {
-    const f = fx('13-late-but-ok');
-    expect(codes({ ...f.problem, maxLateMin: 10 }, goldenPlan(f.name))).toContain('too-late');
+  // D-36 (Shane, 2026-11-14): no lateness. The would-be-late job, put on the route anyway with honest times, is caught.
+  it('a stop that starts after its window ends → too-late, and nothing else', () => {
+    const f = fx('13-would-be-late');
+    const problem = Problem.parse(f.problem);
+    const golden = goldenPlan(f.name);
+    const t = problem.techs[0]!;
+    const order = ['J1', 'J2'].map((id) => problem.jobs.find((j) => j.id === id)!);
+    const late = timeRoute(t, order, order.length); // J1 at 09:00, J2 straight after it (past 09:15), lunch at the end
+    expect(late.stops[1]!.lateMin).toBeGreaterThan(0);
+    const plan: Plan = { ...golden, routes: [late], unassigned: [], objective: { ...golden.objective, lateMin: late.stops[1]!.lateMin, driveMin: late.returnDriveMin + late.stops.reduce((a, s) => a + s.driveMin, 0) } };
+    const res = checkPlan(f.problem, plan);
+    expect(res.errors.map((e) => [e.code, e.jobId])).toEqual([['too-late', late.stops[1]!.jobId]]);
+  });
+
+  it('a would-be-late job left unassigned → passes, and its over-capacity reason is verified', () => {
+    const f = fx('13-would-be-late');
+    const golden = goldenPlan(f.name);
+    expect(golden.unassigned).toEqual([{ jobId: expect.any(String), reasons: ['over-capacity'] }]);
+    expect(golden.objective.lateMin).toBe(0);
+    expect(checkPlan(f.problem, golden).errors).toEqual([]);
+    // the same plan claiming the job can't be done alone in its window is rejected: it can
+    const wrong = clone(golden);
+    wrong.unassigned[0]!.reasons = ['no-window-fit'];
+    expect(codes(f.problem, wrong)).toEqual(['reason']);
   });
 
   it('a false no-skill reason → reason', () => {
@@ -126,7 +183,7 @@ describe('checker catches planted defects', () => {
     expect(byCode('droppable-job') + byCode('reason')).toBe(all.length); // every dropped job is called out
   });
 
-  it('a pinned job dropped as over-capacity when its tech has room → droppable-job', () => {
+  it('a pinned job dropped as over-capacity when its tech has room → pin-dropped (D-37)', () => {
     const f = fx('11-pinned-job');
     const plan = clone(goldenPlan(f.name));
     const q = plan.routes.find((r) => r.techId === 'Q1')!;
@@ -134,7 +191,7 @@ describe('checker catches planted defects', () => {
     // The route's times no longer line up after the splice either (other codes); the point here is J1's own verdict.
     q.stops.splice(idx, 1);
     plan.unassigned.push({ jobId: 'J1', reasons: ['over-capacity'] });
-    expect(codes(f.problem, plan)).toContain('droppable-job');
+    expect(codes(f.problem, plan)).toContain('pin-dropped');
   });
 
   it('the wrong reason for a job no one can do alone → reason', () => {
@@ -153,43 +210,8 @@ describe('checker catches planted defects', () => {
 // PR #1 review must-fix 2, with plans that are otherwise valid (empty routes, or the route re-timed without the job), so
 // only the unassigned verdicts can fail them: a made-up reason is `reason`, a false `over-capacity` is `droppable-job`.
 describe('checker rejects plans that drop jobs (otherwise-valid plans)', () => {
-  const DROP_CODES = ['droppable-job', 'reason'];
+  const DROP_CODES = ['droppable-job', 'reason', 'pin-dropped'];
   const REASONS = ['no-skill', 'no-window-fit', 'over-capacity'] as const;
-  /** Earliest-start timing of a stop order with lunch in gap `gap`, taken as early as allowed (PHASE1_PLAN "Model"). */
-  const timeRoute = (t: Tech, order: Job[], gap: number | null): Route => {
-    const s0 = t.start ?? { point: t.home, at: t.shiftStart };
-    let free = s0.at;
-    let pos = s0.point;
-    let lunch: Route['lunch'] = null;
-    const place = (d: number, ws: number | null) => {
-      const ls = Math.max(free, t.lunch.earliest, s0.at);
-      const arrival = ls <= free + d ? free + d + LUNCH_MINUTES : free + d;
-      let ready = ls > free + d ? Math.max(arrival, ls + LUNCH_MINUTES) : arrival;
-      if (ws !== null) ready = Math.max(ready, ws);
-      return { ls, arrival, ready };
-    };
-    const stops = order.map((j, i) => {
-      const d = driveMinutes(pos, j.location);
-      let arrival = free + d;
-      let start = Math.max(arrival, j.windowStart);
-      if (gap === i) {
-        const p = place(d, j.windowStart);
-        lunch = { start: p.ls, end: p.ls + LUNCH_MINUTES, afterSeq: i };
-        [arrival, start] = [p.arrival, p.ready];
-      }
-      free = start + j.durationMin;
-      pos = j.location;
-      return { jobId: j.id, seq: i + 1, driveMin: d, arrival, start, end: free, slackMin: start - arrival, lateMin: Math.max(0, start - j.windowEnd) };
-    });
-    const back = driveMinutes(pos, t.home);
-    let returnAt = free + back;
-    if (gap === order.length) {
-      const p = place(back, null);
-      lunch = { start: p.ls, end: p.ls + LUNCH_MINUTES, afterSeq: order.length };
-      returnAt = p.arrival;
-    }
-    return { techId: t.id, stops, lunch, returnDriveMin: back, returnAt };
-  };
   const objectiveOf = (problem: Problem, routes: Plan['routes'], unassigned: Plan['unassigned']): Plan['objective'] => ({
     unassignedEmergencies: unassigned.filter((u) => problem.jobs.find((j) => j.id === u.jobId)?.priority === 'emergency').length,
     lateMin: routes.reduce((a, r) => a + r.stops.reduce((b, s) => b + s.lateMin, 0), 0),
@@ -239,10 +261,18 @@ describe('checker rejects plans that drop jobs (otherwise-valid plans)', () => {
     expect(verdict(f, plan, em.id)).toEqual({ ok: false, onlyDropCodes: true, jobFlagged: true });
   });
 
-  it.each(REASONS)('a pinned job dropped with a made-up %s → rejected', (reason) => {
+  // D-37: a pinned job is never dropped, whatever the reason; the plan is otherwise valid, so only pin-dropped fires.
+  it.each(REASONS)('a pinned job dropped with %s → pin-dropped, nothing else', (reason) => {
     const f = fx('11-pinned-job');
     const pinned = f.problem.jobs.find((j) => j.pin)!;
-    expect(verdict(f, dropOne(f, pinned.id, reason), pinned.id)).toEqual({ ok: false, onlyDropCodes: true, jobFlagged: true });
+    const res = checkPlan(f.problem, dropOne(f, pinned.id, reason));
+    expect(res.errors.map((e) => [e.code, e.jobId])).toEqual([['pin-dropped', pinned.id]]);
+  });
+
+  it('a pinned job dropped even when its tech is full → pin-dropped (pins outrank emergencies)', () => {
+    const f = fx('16-pin-never-dropped');
+    const plan = dropOne(f, 'J1', 'over-capacity');
+    expect(codes(f.problem, plan)).toContain('pin-dropped');
   });
 
   it('control: the golden over-capacity plan still passes', () => {

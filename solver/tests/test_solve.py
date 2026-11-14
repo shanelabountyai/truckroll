@@ -94,16 +94,30 @@ def _demo(limit: int) -> SolveRequest:
     return SolveRequest.model_validate({"problem": fx["problem"], "timeLimitMs": limit})
 
 
+def _demo_x3(limit: int) -> SolveRequest:
+    """The demo day three times over (72 jobs, maxJobs 50). Since hard windows (D-36) the demo day itself solves in
+    ~60 ms, under the 100 ms minimum cap, so this heavier day (~450 ms here) is the one a low cap must bite on."""
+    import copy
+
+    from conftest import FIXTURES, load
+
+    p = copy.deepcopy(load(next(f for f in FIXTURES if f.stem == "03-demo-day"))["problem"])
+    p["jobs"] = [dict(copy.deepcopy(j), id=f"{j['id']}-{k}") for k in range(3) for j in p["jobs"]]
+    for t in p["techs"]:
+        t["maxJobs"] = 50
+    return SolveRequest.model_validate({"problem": p, "timeLimitMs": limit})
+
+
 def test_a_low_real_cap_gives_the_same_plan_or_no_plan_never_another_plan_tr04():
-    ref = plan_json(solve(_demo(60_000)))
+    ref = plan_json(solve(_demo_x3(60_000)))
     for limit in (100, 100, 250, 500, 1000):
         try:
-            got = plan_json(solve(_demo(limit)))
+            got = plan_json(solve(_demo_x3(limit)))
         except TimeLimitExceeded:
             continue
         assert got == ref
-    with pytest.raises(TimeLimitExceeded):  # 100 ms is far below the demo day's work budget on any machine we run on
-        solve(_demo(100))
+    with pytest.raises(TimeLimitExceeded):  # 100 ms is far below this day's work budget on any machine we run on
+        solve(_demo_x3(100))
 
 
 def test_plan_has_no_wall_clock_field():

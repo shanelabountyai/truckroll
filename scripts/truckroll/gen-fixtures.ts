@@ -18,7 +18,7 @@ export interface Expect {
   unassignedCounts?: Partial<Record<Reason, number>>;
   /** Exact stop order for a tech. */
   sequence?: Record<string, string[]>;
-  /** Sum of lateMin bounds. */
+  /** Sum of lateMin bounds (always 0 since D-36: no lateness). */
   lateMin?: { min?: number; max?: number };
   /** Techs whose route must have lunch: null (re-plan after the lunch window). */
   noLunch?: string[];
@@ -88,8 +88,8 @@ const tech = (id: string, name: string, skills: Skill[], home: Pt, o: Partial<Te
 
 const ALL: Skill[] = ['install', 'repair', 'maintenance', 'refrigerant-certified'];
 const fixtures: Fixture[] = [];
-const add = (name: string, description: string, techs: TechIn[], jobs: JobIn[], expect: Expect, maxLateMin?: number) =>
-  fixtures.push({ name, description, timeLimitMs: 10_000, problem: { version: 1, date: DATE, ...(maxLateMin === undefined ? {} : { maxLateMin }), techs, jobs }, expect });
+const add = (name: string, description: string, techs: TechIn[], jobs: JobIn[], expect: Expect) =>
+  fixtures.push({ name, description, timeLimitMs: 10_000, problem: { version: 1, date: DATE, techs, jobs }, expect });
 
 {
   const { job } = maker(1);
@@ -193,7 +193,7 @@ const add = (name: string, description: string, techs: TechIn[], jobs: JobIn[], 
   const { job } = maker(9);
   add(
     '09-impossible-window',
-    'A 05:00–05:30 window; every shift starts at 08:00, past the 60-minute lateness cap.',
+    'A 05:00–05:30 window; every shift starts at 08:00, so no tech can be there inside the window (D-36: no lateness).',
     [tech('T1', 'Tech Alpha', ['repair'], MUSKOGEE), tech('T2', 'Tech Beta', ['repair'], TAHLEQUAH)],
     [job('J1', { skill: 'repair', windowStart: hm(5), windowEnd: hm(5, 30) }), job('J2', { skill: 'repair' })],
     { assigned: ['J2'], unassigned: { J1: ['no-window-fit'] } },
@@ -229,11 +229,11 @@ const add = (name: string, description: string, techs: TechIn[], jobs: JobIn[], 
 {
   const { job } = maker(13);
   add(
-    '13-late-but-ok',
-    'Two 60-minute jobs with the same 09:00–09:15 window: the second is late but inside the 60-minute cap.',
+    '13-would-be-late',
+    'Two 60-minute jobs with the same 09:00–09:15 window and one tech: either fits alone, but the second would start after 09:15, so it is unassigned (over-capacity, which the checker verifies) instead of late (D-36).',
     [tech('T1', 'Tech Alpha', ['repair'], MUSKOGEE)],
     [job('J1', { skill: 'repair', windowStart: hm(9), windowEnd: hm(9, 15), spread: 0.01 }), job('J2', { skill: 'repair', windowStart: hm(9), windowEnd: hm(9, 15), spread: 0.01 })],
-    { assigned: ['J1', 'J2'], unassigned: {}, lateMin: { min: 1, max: 60 } },
+    { unassignedCounts: { 'over-capacity': 1 }, lateMin: { max: 0 } },
   );
 }
 {
@@ -259,11 +259,11 @@ const add = (name: string, description: string, techs: TechIn[], jobs: JobIn[], 
 {
   const { job } = maker(16);
   add(
-    '16-pin-wrong-skill',
-    'J1 (install) is pinned to a repair-only tech; another tech could do it, but a pin is never moved.',
-    [tech('T1', 'Tech Repair', ['repair'], MUSKOGEE), tech('T2', 'Tech Install', ['install'], MUSKOGEE)],
-    [job('J1', { skill: 'install', pin: { techId: 'T1' } }), job('J2', { skill: 'repair' })],
-    { assigned: ['J2'], unassigned: { J1: ['no-skill'] } },
+    '16-pin-never-dropped',
+    'T1 takes one job and the maintenance job J1 is pinned to T1: a pin is never dropped (D-37), so the emergency E1 is the one left unassigned (over-capacity). (A pin that cannot be honoured is a pin-conflict, not a plan: tests/truckroll/pins.test.ts.)',
+    [tech('T1', 'Tech Alpha', ['repair', 'maintenance'], MUSKOGEE, { maxJobs: 1 })],
+    [job('J1', { skill: 'maintenance', priority: 'maintenance', pin: { techId: 'T1' } }), job('E1', { skill: 'repair', priority: 'emergency' })],
+    { assigned: ['J1'], unassigned: { E1: ['over-capacity'] } },
   );
 }
 

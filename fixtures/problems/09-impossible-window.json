@@ -1,6 +1,6 @@
 {
   "name": "09-impossible-window",
-  "description": "A 05:00–05:30 window; every shift starts at 08:00, past the 60-minute lateness cap.",
+  "description": "A 05:00–05:30 window; every shift starts at 08:00, so no tech can be there inside the window (D-36: no lateness).",
   "timeLimitMs": 10000,
   "problem": {
     "version": 1,

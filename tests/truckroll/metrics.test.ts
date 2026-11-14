@@ -6,11 +6,12 @@ import { fixtures, goldenPlan } from './helpers';
 const m = (name: string) => computeMetrics(Problem.parse(fixtures.find((f) => f.name === name)!.problem), goldenPlan(name));
 
 describe('metrics', () => {
-  it('on-time %: one of two stops late', () => {
-    const x = m('13-late-but-ok');
-    expect(x.assigned).toBe(2);
-    expect(x.onTimePct).toBe(50);
-    expect(x.lateMin).toBeGreaterThan(0);
+  it('on-time %: no lateness since D-36, so every routed stop is on time', () => {
+    const x = m('13-would-be-late');
+    expect(x.assigned).toBe(1);
+    expect(x.onTimePct).toBe(100);
+    expect(x.lateMin).toBe(0);
+    for (const f of fixtures) expect(m(f.name).lateMin).toBe(0);
   });
   it('unassigned by reason', () => {
     expect(m('14-all-reasons').unassignedByReason).toEqual({ 'no-skill': 1, 'no-window-fit': 1, 'over-capacity': 1 });

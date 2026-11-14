@@ -31,7 +31,7 @@ function fitsWithLunchGap(p: Problem, t: Tech, jobs: Job[], lunchGap: number | n
       if (l.lunch > t.lunch.latest) return false;
       begin = l.ready;
     } else begin = Math.max(free + d, j.windowStart);
-    if (begin - j.windowEnd > p.maxLateMin) return false;
+    if (begin > j.windowEnd) return false; // D-36: no lateness
     free = begin + j.durationMin;
     pos = j.location;
   }
@@ -57,13 +57,17 @@ export function routeFeasible(p: Problem, t: Tech, jobs: Job[]): boolean {
   return false;
 }
 
-/** The reason a job can't be done by anyone alone, or null if some tech could do it alone. */
+/** Could tech `t` do job `j` alone, its pin position aside (a position is about other stops, not fit)? */
+export function fitsAlone(p: Problem, t: Tech, j: Job): boolean {
+  return routeFeasible(p, t, [{ ...j, pin: j.pin ? { techId: j.pin.techId } : undefined }]);
+}
+
+/** The reason an unpinned job can't be done by anyone alone, or null if some tech could do it alone. (A pinned job is
+ * never unassigned, D-37: pins.ts.) */
 export function standaloneReason(p: Problem, j: Job): Reason | null {
-  const candidates = j.pin ? p.techs.filter((t) => t.id === j.pin!.techId) : p.techs;
-  const skilled = candidates.filter((t) => t.skills.includes(j.skill));
+  const skilled = p.techs.filter((t) => t.skills.includes(j.skill));
   if (!skilled.length) return 'no-skill';
-  const alone = { ...j, pin: j.pin ? { techId: j.pin.techId } : undefined }; // position is about other stops, not fit
-  return skilled.some((t) => routeFeasible(p, t, [alone])) ? null : 'no-window-fit';
+  return skilled.some((t) => fitsAlone(p, t, j)) ? null : 'no-window-fit';
 }
 
 /** A tech and position where `j` could be added to the plan's routes without breaking any of them, or null. */
