@@ -62,6 +62,12 @@ model Job {
   pinTechId   String?     @db.Uuid
   pinTech     Technician? @relation(fields: [pinTechId], references: [id], onDelete: SetNull)
   pinPosition Int?
+  /// Phase 3: when the technician marked the job en route / on site / done (or can't complete), for plan-vs-actual.
+  enRouteAt   DateTime?   @db.Timestamptz(6)
+  onSiteAt    DateTime?   @db.Timestamptz(6)
+  doneAt      DateTime?   @db.Timestamptz(6)
+  /// Phase 3: the technician's note when the job can't be completed.
+  statusNote  String?
   createdAt   DateTime    @default(now()) @db.Timestamptz(6)
   stops       PlanStop[]
 
@@ -83,6 +89,10 @@ model DispatchPlan {
   lateMin         Int
   unassignedCount Int
   stoppedBy       String
+  /// Phase 3 re-plan (D-47): the cut-off in minutes after midnight (null = a whole-day plan) and the plan it re-planned.
+  /// For a re-plan, `problem` is the re-plan problem and `plan` is the merged day (started stops + the solver's stops).
+  asOf            Int?
+  basePlanId      String?    @db.Uuid // no FK: plans are append-only history
   createdAt       DateTime   @default(now()) @db.Timestamptz(6)
   stops           PlanStop[]
 
