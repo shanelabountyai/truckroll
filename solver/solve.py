@@ -17,6 +17,7 @@ from contract import LUNCH_MINUTES, Job, Point, Problem, SolveRequest, Tech
 from distance import drive_minutes
 
 DAY = 24 * 60
+PRIORITY_RANK = {"emergency": 0, "standard": 1, "maintenance": 2}
 
 
 class TimeLimitExceeded(Exception):
@@ -190,16 +191,27 @@ def _model_solve(p: Problem, eligible: list[Job], time_limit_ms: int):
     params = pywrapcp.DefaultRoutingSearchParameters()
     params.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PARALLEL_CHEAPEST_INSERTION
     params.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GREEDY_DESCENT
+    # The work limit (D-18): greedy descent ends at a local optimum or after SOLUTION_LIMIT solutions. Both are counts,
+    # so the search does the same work on any machine; the routing search is single-threaded.
     params.solution_limit = objective.SOLUTION_LIMIT
+    # The clock is only a safety net. lns_time_limit (default 100 ms) is a per-neighbourhood clock inside the search: a
+    # slow machine could hit it without hitting the overall cap and quietly get a different plan, so it is lifted to the
+    # cap as well. Whichever clock bites, the result is TimeLimitExceeded, never a plan.
     params.time_limit.FromMilliseconds(time_limit_ms)
+    params.lns_time_limit.FromMilliseconds(time_limit_ms)
     params.log_search = False
 
     t0 = time.monotonic()
     sol = routing.SolveWithParameters(params)
     elapsed_ms = (time.monotonic() - t0) * 1000
-    if elapsed_ms >= time_limit_ms:
-        raise TimeLimitExceeded(f"search hit the {time_limit_ms} ms limit")
-    if routing.solver().Solutions() >= objective.SOLUTION_LIMIT:
+    solutions = routing.solver().Solutions()
+    S = routing_enums_pb2.RoutingSearchStatus
+    # Two independent signs of a clock cut: the elapsed time, and OR-Tools' own status (a limit stopped the search
+    # before a local optimum while the solution count was still under SOLUTION_LIMIT).
+    clock_cut = routing.status() in (S.ROUTING_FAIL_TIMEOUT, S.ROUTING_PARTIAL_SUCCESS_LOCAL_OPTIMUM_NOT_REACHED)
+    if solutions < objective.SOLUTION_LIMIT and (elapsed_ms >= time_limit_ms or clock_cut):
+        raise TimeLimitExceeded(f"search hit the {time_limit_ms} ms limit after {solutions} solutions")
+    if solutions >= objective.SOLUTION_LIMIT:
         stopped = "solution-limit"
     else:
         stopped = "local-optimum"
@@ -224,6 +236,51 @@ def _model_solve(p: Problem, eligible: list[Job], time_limit_ms: int):
     return out, stopped
 
 
+def _insertions(p: Problem, t: Tech, seq: list[Job], j: Job):
+    """Every feasible route with j inserted into t's sequence (pins, maxJobs, windows, shift, lunch all honoured)."""
+    if j.skill not in t.skills or (j.pin and j.pin.techId != t.id) or len(seq) + 1 > t.maxJobs:
+        return
+    for k in range(len(seq) + 1):
+        if j.pin and j.pin.position is not None and j.pin.position != k + 1:
+            continue
+        if any(o.pin and o.pin.position is not None for o in seq[k:]):
+            continue  # inserting here would move a stop pinned to its position
+        new = seq[:k] + [j] + seq[k:]
+        r = _best_lunch_gap(p, t, new, None)
+        if r is not None:
+            yield k, new, r
+
+
+def _repair(p: Problem, eligible: list[Job], seqs: dict[str, list[Job]], built: dict[str, dict]) -> None:
+    """Insert every unrouted job that still fits somewhere, so `over-capacity` is only ever said of a job that cannot be
+    added to any route of the returned plan (the checker re-derives this, D-03). Most important jobs first; the
+    cheapest insertion (lateness, then drive) wins; ties go to tech order, then position. Deterministic."""
+    order = sorted(eligible, key=lambda j: (0 if j.pin else 1, PRIORITY_RANK[j.priority], j.id))
+    changed = True
+    while changed:
+        changed = False
+        routed = {s["jobId"] for r in built.values() for s in r["stops"]}
+        for j in order:
+            if j.id in routed:
+                continue
+            best = None
+            for ti, t in enumerate(p.techs):
+                before = built[t.id]
+                base_late = sum(st["lateMin"] for st in before["stops"])
+                base_drive = before["returnDriveMin"] + sum(st["driveMin"] for st in before["stops"])
+                for k, new, r in _insertions(p, t, seqs[t.id], j):
+                    late = sum(st["lateMin"] for st in r["stops"]) - base_late
+                    drive = r["returnDriveMin"] + sum(st["driveMin"] for st in r["stops"]) - base_drive
+                    key = (late, drive, ti, k)
+                    if best is None or key < best[0]:
+                        best = (key, t, new, r)
+            if best is not None:
+                _, t, new, r = best
+                seqs[t.id], built[t.id] = new, r
+                routed.add(j.id)
+                changed = True
+
+
 def solve(req: SolveRequest) -> dict:
     p = req.problem
     reasons = precheck(p)
@@ -235,17 +292,20 @@ def solve(req: SolveRequest) -> dict:
         if res is not None:
             assignments = res
 
-    routes = []
-    routed: set[str] = set()
+    seqs: dict[str, list[Job]] = {}
+    built: dict[str, dict] = {}
     for t, seq, gap in assignments:
         r = _best_lunch_gap(p, t, seq, gap)
         while r is None and seq:  # defensive: never emit a plan the checker would reject; drop from the end
             seq = seq[:-1]
             r = _best_lunch_gap(p, t, seq, None)
         if r is None:
+            seq = []
             r = _best_lunch_gap(p, t, [], None)
-        routes.append(r)
-        routed.update(s["jobId"] for s in r["stops"])
+        seqs[t.id], built[t.id] = seq, r
+    _repair(p, eligible, seqs, built)
+    routes = [built[t.id] for t in p.techs]
+    routed = {s["jobId"] for r in routes for s in r["stops"]}
 
     unassigned = []
     for j in p.jobs:
