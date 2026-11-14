@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { can } from '@/core/authz/permissions';
 import { requireOrg } from '@/core/authz/guards';
 import { db } from '@/core/db';
+import { isDispatcher } from '@/lib/dispatch/roles';
 
 // Navigation only. Layouts do not re-run on every navigation, so each page calls requireOrg itself.
 export default async function OrgLayout({ children, params }: { children: React.ReactNode; params: Promise<{ org: string }> }) {
@@ -11,7 +12,7 @@ export default async function OrgLayout({ children, params }: { children: React.
   return (
     <>
       <nav>
-        <strong>{org.name}</strong> · <Link href={base}>Home</Link> · <Link href={`${base}/projects`}>Projects</Link> · <Link href={`${base}/settings/members`}>Members</Link>
+        <strong>{org.name}</strong> · <Link href={`${base}/dispatch`}>{isDispatcher(ctx.role) ? 'Dispatch' : 'My day'}</Link> · <Link href={`${base}/settings/members`}>Members</Link>
         {can(ctx.role, 'audit.read') && <> · <Link href={`${base}/settings/audit`}>Audit log</Link> · <Link href={`${base}/settings/security`}>Security</Link></>}
         {ctx.role === 'owner' && <> · <Link href={`${base}/settings/sso`}>SSO</Link></>} {/* sso */}
         {can(ctx.role, 'apikeys.manage') && <> · <Link href={`${base}/settings/apikeys`}>API keys</Link></>} {/* apikeys */}
