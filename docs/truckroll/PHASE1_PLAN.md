@@ -30,11 +30,16 @@ All times are **integer minutes after local midnight** on the plan date; all dis
   standard drop 10^6 > maintenance drop 10^5 > lateness 10^3 per minute > drive 1 per minute. With `maxLateMin` = 60 a
   job's worst lateness (6·10^4) costs less than dropping any job.
 - **Reason codes**: `no-skill` (no tech — or the pinned tech — has the skill), `no-window-fit` (no skilled tech could
-  do the job alone inside its shift, window cap and lunch), `over-capacity` (individually feasible, but dropped by the
-  solver for time or `maxJobs`). The first two come from a pre-check; the solver never sees those jobs.
+  do the job alone inside its shift, window cap and lunch), `over-capacity` (individually feasible, but it cannot be
+  added anywhere in the returned plan's routes). The first two come from a pre-check; the solver never sees those
+  jobs. After the search a deterministic repair pass inserts any unrouted job that still fits (pinned first, then by
+  priority; cheapest by lateness, then drive), so `over-capacity` is always true, including when OR-Tools returns no
+  solution. The checker re-derives every reason (D-32). *(Revised 2026-11-14, PR #1 review.)*
 - **Determinism** (TR-04): one search worker, `PARALLEL_CHEAPEST_INSERTION` then `GREEDY_DESCENT` to a local optimum,
   bounded by a solution limit (never the clock); `timeLimitMs` is a hard cap, and a search that hits it returns
-  no plan at all (503 / exit 3), so every plan returned is reproducible (D-18, revised after review). *(Revised: the draft
+  no plan at all (503 / exit 3), so every plan returned is reproducible (D-18, revised after review). A clock cut is
+  detected by elapsed time and by OR-Tools' status; `lns_time_limit` is lifted to the cap so no per-neighbourhood
+  clock can change the search on a slow machine. *(Revised: the draft
   said guided local search, but GLS has no natural end and ran to the clock on small fixtures — see D-18.)* After the search, timings are normalised by a deterministic
   earliest-start forward pass (never later than the solver's, so feasibility is kept). JSON is emitted with sorted keys
   and no whitespace (D-18).
