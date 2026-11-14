@@ -4,7 +4,7 @@ import { hhmm } from '@/lib/dispatch/time';
 // One technician's day as positioned blocks (PRD §7 Phase 2: "plan view per tech as a timeline"), with the same data
 // in a table beneath for screen readers and tests. Server-rendered; no client JS.
 
-export type StopJob = { ref: string; customer: string; priority: string; windowStart: number; windowEnd: number };
+export type StopJob = { ref: string; customer: string; priority: string; windowStart: number; windowEnd: number; status?: string };
 
 const td = { paddingRight: 12 };
 const COLORS: Record<string, string> = { emergency: '#c62828', standard: '#1565c0', maintenance: '#2e7d32' };
@@ -54,7 +54,7 @@ export function TechTimeline({
           <caption style={{ textAlign: 'left' }}>Stops for {name}</caption>
           <thead>
             <tr>
-              {['#', 'Job', 'Customer', 'Window', 'Arrive', 'Work', 'Drive'].map((h) => (
+              {['#', 'Job', 'Customer', 'Window', 'Arrive', 'Work', 'Drive', 'Status'].map((h) => (
                 <th key={h} style={{ textAlign: 'left', paddingRight: 12 }}>{h}</th>
               ))}
             </tr>
@@ -72,6 +72,7 @@ export function TechTimeline({
                   <td style={td}>{hhmm(s.arrival)}</td>
                   <td style={td}>{hhmm(s.start)}–{hhmm(s.end)}</td>
                   <td style={td}>{s.driveMin} min</td>
+                  <td style={td}>{j?.status?.replace('_', ' ') ?? ''}</td>
                 </tr>
               );
             })}

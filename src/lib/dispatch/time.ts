@@ -35,3 +35,20 @@ export const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 export function todayIn(timeZone = 'America/Chicago', at = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(at);
 }
+
+/** Minutes after midnight of `at` in `timeZone`, or null when `at` is not on calendar day `day` there (D-27, D-40). */
+export function localMinuteOn(at: Date | null | undefined, day: string, timeZone = 'America/Chicago'): number | null {
+  if (!at) return null;
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+      .formatToParts(at)
+      .map((p) => [p.type, p.value]),
+  );
+  if (`${parts.year}-${parts.month}-${parts.day}` !== day) return null;
+  return Number(parts.hour) * 60 + Number(parts.minute);
+}
+
+/** Now as minutes after midnight in `timeZone` (the re-plan form's default when the board shows today, D-38). */
+export function nowMinuteIn(timeZone = 'America/Chicago', at = new Date()): number {
+  return localMinuteOn(at, todayIn(timeZone, at), timeZone)!;
+}

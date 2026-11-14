@@ -10,4 +10,5 @@ ADD COLUMN     "statusNote" TEXT;
 
 -- AlterTable
 ALTER TABLE "DispatchPlan" ADD COLUMN     "asOf" INTEGER,
-ADD COLUMN     "basePlanId" UUID;
+ADD COLUMN     "basePlanId" UUID,
+ADD COLUMN     "solved" JSONB;

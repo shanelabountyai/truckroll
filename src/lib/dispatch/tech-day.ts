@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { inOrg, type OrgCtx } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
 import { currentPlan } from './plan-store';
+import { isoDay } from './time';
 import { isDispatcher } from './roles';
 
 // TR-05: a technician (member) reads only their own day. Both reads below scope by org first, then by the technician
@@ -31,5 +32,7 @@ export async function readStop(ctx: OrgCtx, id: string) {
   );
   if (!stop) notFound();
   if (!isDispatcher(ctx.role) && stop.tech.userId !== ctx.userId) notFound();
-  return stop;
+  // Phase 3: statuses are set on the day's current plan only.
+  const current = await withOrg(ctx, (tx) => currentPlan(tx, ctx.orgId, isoDay(stop.plan.date)), { atomic: false });
+  return { ...stop, current: current?.id === stop.planId };
 }

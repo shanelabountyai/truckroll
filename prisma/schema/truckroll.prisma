@@ -93,6 +93,8 @@ model DispatchPlan {
   /// For a re-plan, `problem` is the re-plan problem and `plan` is the merged day (started stops + the solver's stops).
   asOf            Int?
   basePlanId      String?    @db.Uuid // no FK: plans are append-only history
+  /// The solver's plan for the open work, exactly as checkPlan passed it against `problem` (re-plans only).
+  solved          Json?
   createdAt       DateTime   @default(now()) @db.Timestamptz(6)
   stops           PlanStop[]
 

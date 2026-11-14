@@ -13,6 +13,16 @@ export const FROZEN: readonly JobStatus[] = ['en_route', 'on_site', 'done', 'can
 /** A tech's current job: at most one per tech (setJobStatus enforces it). */
 export const ACTIVE: readonly JobStatus[] = ['en_route', 'on_site'];
 export const isFrozen = (s: JobStatus) => FROZEN.includes(s);
+/** D-44: the moves a technician (or the dispatcher) can make on a stop. `can't complete` needs a note. */
+export const NEXT_STATUS: Record<JobStatus, JobStatus[]> = {
+  unscheduled: [],
+  scheduled: ['en_route', 'on_site'],
+  en_route: ['on_site', 'cant_complete'],
+  on_site: ['done', 'cant_complete'],
+  done: [],
+  cant_complete: [],
+};
+export const STATUS_LABEL: Record<JobStatus, string> = { unscheduled: 'unscheduled', scheduled: 'scheduled', en_route: 'en route', on_site: 'on site', done: 'done', cant_complete: 'can’t complete' };
 
 /** What a re-plan needs to know about a job beyond the contract: its status, and actual times on the plan's day. */
 export interface JobState {

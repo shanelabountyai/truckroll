@@ -5,9 +5,10 @@ import { ActionForm } from '@/core/ui/action-form';
 import { PRIORITIES, SKILLS, type Plan } from '@/lib/dispatch/contract';
 import type { PlanMetrics } from '@/lib/dispatch/metrics';
 import { currentPlan } from '@/lib/dispatch/plan-store';
+import { FROZEN, type JobStatus } from '@/lib/dispatch/replan';
 import { isDispatcher } from '@/lib/dispatch/roles';
-import { dayOf, hhmm, isRealDay, todayIn } from '@/lib/dispatch/time';
-import { addJob, addTech, pinJob, planDay, unpinJob } from './actions';
+import { dayOf, hhmm, isRealDay, nowMinuteIn, todayIn } from '@/lib/dispatch/time';
+import { addJob, addTech, insertEmergency, pinJob, planDay, replanDay, unpinJob } from './actions';
 import { TechTimeline, type StopJob } from './timeline';
 
 export const metadata = { title: 'Dispatch' };
@@ -21,8 +22,8 @@ const REASON_TEXT: Record<string, string> = {
   'over-capacity': 'no route has room for it inside its window',
 };
 
-// The dispatcher board (PRD §7 Phase 2): the day's jobs with pins, the technicians, Plan the day, and the current plan
-// as one timeline per technician.
+// The dispatcher board (PRD §7 Phases 2–3): the day's jobs with pins and statuses, the technicians, Plan the day,
+// Re-plan from a time and Emergency insert (Phase 3), and the current plan as one timeline per technician.
 export default async function DispatchBoard({ params, searchParams }: { params: Promise<{ org: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const ctx = await requireOrg((await params).org);
   const q = await searchParams;
@@ -30,14 +31,15 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
   const date = isRealDay(asked) ? asked : todayIn();
   if (!isDispatcher(ctx.role)) redirect(`/o/${ctx.slug}/dispatch/my-day?date=${date}`);
 
-  const { techs, jobs, saved, members } = await withOrg(ctx, async (tx) => {
+  const { techs, jobs, saved, members, stopIds } = await withOrg(ctx, async (tx) => {
     const [techs, jobs, saved, members] = await Promise.all([
       tx.technician.findMany({ where: inOrg(ctx), orderBy: [{ name: 'asc' }, { id: 'asc' }], include: { user: { select: { email: true } } } }),
       tx.job.findMany({ where: { ...inOrg(ctx), date: dayOf(date) }, orderBy: [{ ref: 'asc' }, { id: 'asc' }] }),
       currentPlan(tx, ctx.orgId, date),
       tx.membership.findMany({ where: { ...inOrg(ctx), role: 'member' }, include: { user: { select: { id: true, email: true } } }, orderBy: { createdAt: 'asc' } }),
     ]);
-    return { techs, jobs, saved, members };
+    const stops = saved ? await tx.planStop.findMany({ where: { ...inOrg(ctx), planId: saved.id }, select: { id: true, jobId: true } }) : [];
+    return { techs, jobs, saved, members, stopIds: new Map(stops.map((x) => [x.jobId, x.id])) };
   }, { atomic: false });
 
   const plan = (saved?.plan ?? null) as Plan | null;
@@ -50,6 +52,11 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
   const scale = techs.length ? { from: Math.min(...techs.map((t) => t.shiftStart)) - 30, to: Math.max(...techs.map((t) => t.shiftEnd)) + 30 } : { from: 420, to: 1080 };
   const bind = <A extends unknown[], R>(fn: (slug: string, ...a: A) => R) => fn.bind(null, ctx.slug);
   const linked = new Set(techs.map((t) => t.userId).filter(Boolean));
+  const started = jobs.filter((j) => FROZEN.includes(j.status as JobStatus)).length;
+  const isToday = date === todayIn();
+  const asOfDefault = isToday ? hhmm(nowMinuteIn()) : '';
+  const unplacedEmergencies = (plan?.unassigned ?? []).filter((u) => jobInfo.get(u.jobId)?.priority === 'emergency');
+  const replannedAt = typeof q.replanned === 'string' && /^\d{4}$/.test(q.replanned) ? `${q.replanned.slice(0, 2)}:${q.replanned.slice(2)}` : null;
 
   return (
     <main style={{ maxWidth: 1200 }}>
@@ -58,21 +65,72 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
         <label>Day <input type="date" name="date" defaultValue={date} /></label> <button type="submit">Show</button>
       </form>
       {q.saved === '1' && saved && plan && <p role="status">Plan saved: {plan.routes.reduce((n, r) => n + r.stops.length, 0)} stops, {saved.unassignedCount} unassigned.</p>}
+      {replannedAt && saved && plan && saved.asOf !== null && (
+        <p role="status">Re-plan saved as of {replannedAt}: {plan.routes.reduce((n, r) => n + r.stops.length, 0)} stops, {saved.unassignedCount} unassigned. Started jobs and pins were kept.</p>
+      )}
+      {unplacedEmergencies.length > 0 && (
+        <div role="alert" aria-label="Unplaced emergencies" style={{ border: '2px solid #c62828', borderRadius: 6, padding: '8px 12px', margin: '8px 0' }}>
+          <strong>{unplacedEmergencies.length === 1 ? 'An emergency could not be placed' : `${unplacedEmergencies.length} emergencies could not be placed`}.</strong>{' '}
+          {unplacedEmergencies.map((u) => `Job ${jobInfo.get(u.jobId)?.ref ?? 'removed'}: ${u.reasons.map((r) => REASON_TEXT[r] ?? r).join('; ')}.`).join(' ')}{' '}
+          Pinned jobs and started work are never moved to make room (D-37). To put the emergency first, unpin a job or change its window, then re-plan.
+        </div>
+      )}
 
-      <ActionForm action={bind(planDay)}>
-        <input type="hidden" name="date" value={date} />
-        <button type="submit" disabled={!jobs.length || !techs.length}>Plan the day</button>{' '}
-        <small>
-          Pinned jobs never move: each is planned on its pinned tech, at its pinned position if it has one. If the pins can&apos;t all be kept, nothing is planned and you are told which pins to change. Jobs are scheduled only inside their window; a job no tech can reach in its window stays unassigned. Every plan is checked before it is saved.
-        </small>
-      </ActionForm>
+      {started === 0 ? (
+        <ActionForm action={bind(planDay)}>
+          <input type="hidden" name="date" value={date} />
+          <button type="submit" disabled={!jobs.length || !techs.length}>Plan the day</button>{' '}
+          <small>
+            Pinned jobs never move: each is planned on its pinned tech, at its pinned position if it has one. If the pins can&apos;t all be kept, nothing is planned and you are told which pins to change. Jobs are scheduled only inside their window; a job no tech can reach in its window stays unassigned. Every plan is checked before it is saved.
+          </small>
+        </ActionForm>
+      ) : (
+        <p><small>Work has started on this day ({started} job{started === 1 ? '' : 's'} en route, on site or finished), so it is re-planned from a time instead of planned from scratch.</small></p>
+      )}
+
+      {plan && (
+        <section aria-label="Re-plan" style={{ margin: '1rem 0', padding: '8px 12px', border: '1px solid #ccc', borderRadius: 6 }}>
+          <h2 style={{ marginTop: 0 }}>Mid-day re-plan</h2>
+          <ActionForm action={bind(replanDay)}>
+            <input type="hidden" name="date" value={date} />
+            <label>Re-plan from <input name="asOf" type="time" required defaultValue={asOfDefault} /></label>{' '}
+            <button type="submit">Re-plan</button>{' '}
+            <small>
+              Jobs en route, on site, done or can&apos;t-complete stay exactly where they are; each technician starts from their current job (or the last one they finished, or home) as their statuses say. A stop nobody marked counts as not started. Pins are kept; an emergency never displaces a pin.
+            </small>
+          </ActionForm>
+          <details style={{ marginTop: 8 }}>
+            <summary>Emergency insert</summary>
+            <ActionForm action={bind(insertEmergency)}>
+              <input type="hidden" name="date" value={date} />
+              <p>
+                <label>Re-plan from <input name="asOf" type="time" required defaultValue={asOfDefault} aria-label="Emergency re-plan time" /></label>{' '}
+                <label>Window end <input name="windowEnd" type="time" required defaultValue="14:00" aria-label="Emergency window end" /></label>{' '}
+                <label>Duration (min) <input name="durationMin" type="number" min={1} max={720} required defaultValue={60} aria-label="Emergency duration" /></label>
+              </p>
+              <p>
+                <label>Job number <input name="ref" required maxLength={32} aria-label="Emergency job number" /></label>{' '}
+                <label>Customer <input name="customer" required maxLength={120} aria-label="Emergency customer" /></label>{' '}
+                <label>Address <input name="address" required maxLength={200} aria-label="Emergency address" /></label>
+              </p>
+              <p>
+                <label>Latitude <input name="lat" required inputMode="decimal" aria-label="Emergency latitude" /></label>{' '}
+                <label>Longitude <input name="lng" required inputMode="decimal" aria-label="Emergency longitude" /></label>{' '}
+                <label>Skill <select name="skill" defaultValue="repair" aria-label="Emergency skill">{SKILLS.map((x) => <option key={x}>{x}</option>)}</select></label>
+              </p>
+              <button type="submit">Add emergency and re-plan</button>{' '}
+              <small>The window opens at the re-plan time. The job is added first; if the re-plan can&apos;t be saved, it stays on the board unassigned and you are told why.</small>
+            </ActionForm>
+          </details>
+        </section>
+      )}
 
       <h2>Plan</h2>
       {!plan && <p>No plan saved for this day yet.</p>}
       {plan && metrics && (
         <>
           <p aria-label="Plan summary">
-            Saved {saved!.createdAt.toISOString().slice(11, 16)} UTC · on time {metrics.onTimePct}% · drive {metrics.driveMin} min · utilization {metrics.utilizationPct}% ·{' '}
+            {saved!.asOf !== null ? `Re-plan as of ${hhmm(saved!.asOf)} · ` : ''}Saved {saved!.createdAt.toISOString().slice(11, 16)} UTC · on time {metrics.onTimePct}% · drive {metrics.driveMin} min · utilization {metrics.utilizationPct}% ·{' '}
             <strong>{plan.unassigned.length} unassigned</strong>
           </p>
           {techs.map((t) => (
@@ -84,7 +142,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
               route={plan.routes.find((r) => r.techId === t.id) ?? null}
               jobs={jobInfo}
               scale={scale}
-              stopHref={() => null}
+              stopHref={(jobId) => (stopIds.has(jobId) ? `/o/${ctx.slug}/dispatch/stops/${stopIds.get(jobId)}` : null)}
             />
           ))}
           {plan.unassigned.length > 0 && (
@@ -125,7 +183,9 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
                 <td style={cell}>{j.status.replace('_', ' ')}</td>
                 <td style={cell}>{a ? `${techName.get(a.techId)} #${a.seq}` : reasons.get(j.id)?.join(', ') ?? '—'}</td>
                 <td style={cell}>
-                  {j.pinTechId ? (
+                  {FROZEN.includes(j.status as JobStatus) ? (
+                    j.pinTechId ? `Pinned to ${techName.get(j.pinTechId)}${j.pinPosition ? ` at #${j.pinPosition}` : ''} · started` : 'started'
+                  ) : j.pinTechId ? (
                     <ActionForm action={bind(unpinJob)}>
                       <input type="hidden" name="id" value={j.id} />
                       Pinned to {techName.get(j.pinTechId)}{j.pinPosition ? ` at #${j.pinPosition}` : ''} <button type="submit" aria-label={`Unpin ${j.ref}`}>Unpin</button>
