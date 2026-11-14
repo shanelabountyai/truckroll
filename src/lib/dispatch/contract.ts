@@ -6,8 +6,17 @@ import { z } from 'zod';
 export const SKILLS = ['install', 'repair', 'maintenance', 'refrigerant-certified', 'commercial'] as const;
 export const PRIORITIES = ['emergency', 'standard', 'maintenance'] as const;
 export const REASONS = ['no-skill', 'no-window-fit', 'over-capacity'] as const;
+// D-37: why a set of pins can't all be honoured; judged in this order (src/lib/dispatch/pins.ts, solver/solve.py).
+export const PIN_CONFLICT_CODES = [
+  'no-skill',
+  'position-over-capacity',
+  'no-window-fit',
+  'position-taken',
+  'over-capacity',
+  'infeasible-together',
+  'search-limit',
+] as const;
 export const LUNCH_MINUTES = 30;
-export const DEFAULT_MAX_LATE_MIN = 60;
 
 const minute = z.number().int().min(0).max(24 * 60);
 const id = z.string().min(1).max(64);
@@ -67,7 +76,7 @@ export const Problem = z
   .object({
     version: z.literal(1),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    maxLateMin: z.number().int().min(0).max(240).default(DEFAULT_MAX_LATE_MIN),
+    // No `maxLateMin` since D-36: windows are hard (a stop starts inside its window or the job is unassigned).
     techs: z.array(Tech).max(100),
     jobs: z.array(Job).max(1000),
   })
@@ -100,7 +109,7 @@ export const Stop = z
     start: minute,
     end: minute,
     slackMin: z.number().int().min(0),
-    lateMin: z.number().int().min(0),
+    lateMin: z.number().int().min(0), // always 0 since D-36; kept for the wire format and Phase 2's columns
   })
   .strict();
 export type Stop = z.infer<typeof Stop>;
@@ -131,3 +140,13 @@ export const Plan = z
   })
   .strict();
 export type Plan = z.infer<typeof Plan>;
+
+// D-37: the solver's answer when the pins can't all be honoured (POST /solve 422, cli.py exit 4). There is no plan.
+export const PinConflictCode = z.enum(PIN_CONFLICT_CODES);
+export type PinConflictCode = z.infer<typeof PinConflictCode>;
+export const PinConflictEntry = z.object({ code: PinConflictCode, jobId: id, techId: id }).strict();
+export type PinConflictEntry = z.infer<typeof PinConflictEntry>;
+export const PinConflictError = z
+  .object({ error: z.literal('pin-conflict'), pins: z.array(PinConflictEntry).min(1), detail: z.string() })
+  .strict();
+export type PinConflictError = z.infer<typeof PinConflictError>;

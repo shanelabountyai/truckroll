@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import type { Plan, ProblemInput, Reason } from '@/lib/dispatch/contract';
+import { PinConflictError, type Plan, type ProblemInput, type Reason } from '@/lib/dispatch/contract';
 import type { Expect, Fixture } from '../../scripts/truckroll/gen-fixtures';
 
 export const ROOT = resolve(__dirname, '../..');
@@ -37,6 +37,15 @@ function runPython(args: string[], input: string): string {
 /** Raw bytes of the solver's plan (canonical JSON) for a problem, through solver/cli.py — the POST /solve code path. */
 export function solveRaw(problem: ProblemInput, timeLimitMs = 10_000): string {
   return runPython(['cli.py'], JSON.stringify({ problem, timeLimitMs }));
+}
+
+/** D-37: the solver's answer either way — a plan, or the pin-conflict it gives instead (cli.py exit 4, stderr). */
+export function solveResult(problem: ProblemInput, timeLimitMs = 10_000): { plan: Plan; raw: string } | { pinConflict: PinConflictError; raw: string } {
+  const r = spawnSync(python, ['cli.py'], { cwd: SOLVER_DIR, input: JSON.stringify({ problem, timeLimitMs }), encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  if (r.status === 0) return { plan: JSON.parse(r.stdout) as Plan, raw: r.stdout };
+  const m = /^pin-conflict: (.*)\n$/s.exec(r.stderr);
+  if (r.status === 4 && m) return { pinConflict: PinConflictError.parse(JSON.parse(m[1]!)), raw: m[1]! };
+  throw new Error(`solver exited ${r.status}: ${r.stderr}`);
 }
 
 export function pythonDriveMatrix(points: { lat: number; lng: number }[]): number[][] {

@@ -1,19 +1,19 @@
 {
   "date": "2026-11-16",
   "objective": {
-    "driveMin": 221,
+    "driveMin": 237,
     "lateMin": 0,
     "unassignedEmergencies": 0
   },
   "routes": [
     {
       "lunch": {
-        "afterSeq": 3,
-        "end": 791,
-        "start": 761
+        "afterSeq": 1,
+        "end": 720,
+        "start": 690
       },
-      "returnAt": 931,
-      "returnDriveMin": 11,
+      "returnAt": 912,
+      "returnDriveMin": 4,
       "stops": [
         {
           "arrival": 483,
@@ -26,34 +26,24 @@
           "start": 600
         },
         {
-          "arrival": 665,
-          "driveMin": 5,
-          "end": 710,
-          "jobId": "J21",
+          "arrival": 666,
+          "driveMin": 6,
+          "end": 840,
+          "jobId": "J05",
           "lateMin": 0,
           "seq": 2,
-          "slackMin": 0,
-          "start": 665
+          "slackMin": 54,
+          "start": 720
         },
         {
-          "arrival": 716,
-          "driveMin": 6,
-          "end": 761,
-          "jobId": "J13",
+          "arrival": 848,
+          "driveMin": 8,
+          "end": 908,
+          "jobId": "J15",
           "lateMin": 0,
           "seq": 3,
           "slackMin": 0,
-          "start": 716
-        },
-        {
-          "arrival": 800,
-          "driveMin": 9,
-          "end": 920,
-          "jobId": "J09",
-          "lateMin": 0,
-          "seq": 4,
-          "slackMin": 0,
-          "start": 800
+          "start": 848
         }
       ],
       "techId": "M1"
@@ -64,8 +54,8 @@
         "end": 735,
         "start": 705
       },
-      "returnAt": 950,
-      "returnDriveMin": 4,
+      "returnAt": 968,
+      "returnDriveMin": 12,
       "stops": [
         {
           "arrival": 489,
@@ -78,34 +68,34 @@
           "start": 660
         },
         {
-          "arrival": 745,
-          "driveMin": 10,
-          "end": 790,
-          "jobId": "J17",
+          "arrival": 747,
+          "driveMin": 12,
+          "end": 792,
+          "jobId": "J21",
           "lateMin": 0,
           "seq": 2,
           "slackMin": 0,
-          "start": 745
+          "start": 747
         },
         {
-          "arrival": 802,
-          "driveMin": 12,
-          "end": 877,
+          "arrival": 797,
+          "driveMin": 5,
+          "end": 872,
           "jobId": "J03",
           "lateMin": 0,
           "seq": 3,
           "slackMin": 0,
-          "start": 802
+          "start": 797
         },
         {
-          "arrival": 886,
+          "arrival": 881,
           "driveMin": 9,
-          "end": 946,
-          "jobId": "J15",
+          "end": 956,
+          "jobId": "J23",
           "lateMin": 0,
           "seq": 4,
           "slackMin": 0,
-          "start": 886
+          "start": 881
         }
       ],
       "techId": "M2"
@@ -116,8 +106,8 @@
         "end": 690,
         "start": 660
       },
-      "returnAt": 908,
-      "returnDriveMin": 12,
+      "returnAt": 942,
+      "returnDriveMin": 11,
       "stops": [
         {
           "arrival": 427,
@@ -142,22 +132,32 @@
         {
           "arrival": 658,
           "driveMin": 6,
-          "end": 810,
-          "jobId": "J05",
+          "end": 735,
+          "jobId": "J13",
           "lateMin": 0,
           "seq": 3,
           "slackMin": 32,
           "start": 690
         },
         {
-          "arrival": 821,
-          "driveMin": 11,
-          "end": 896,
-          "jobId": "J23",
+          "arrival": 752,
+          "driveMin": 17,
+          "end": 797,
+          "jobId": "J17",
           "lateMin": 0,
           "seq": 4,
           "slackMin": 0,
-          "start": 821
+          "start": 752
+        },
+        {
+          "arrival": 811,
+          "driveMin": 14,
+          "end": 931,
+          "jobId": "J09",
+          "lateMin": 0,
+          "seq": 5,
+          "slackMin": 0,
+          "start": 811
         }
       ],
       "techId": "M3"
@@ -216,60 +216,18 @@
     },
     {
       "lunch": {
-        "afterSeq": 1,
-        "end": 720,
-        "start": 690
-      },
-      "returnAt": 900,
-      "returnDriveMin": 3,
-      "stops": [
-        {
-          "arrival": 485,
-          "driveMin": 5,
-          "end": 660,
-          "jobId": "J08",
-          "lateMin": 0,
-          "seq": 1,
-          "slackMin": 115,
-          "start": 600
-        },
-        {
-          "arrival": 664,
-          "driveMin": 4,
-          "end": 840,
-          "jobId": "J14",
-          "lateMin": 0,
-          "seq": 2,
-          "slackMin": 116,
-          "start": 780
-        },
-        {
-          "arrival": 852,
-          "driveMin": 12,
-          "end": 897,
-          "jobId": "J20",
-          "lateMin": 0,
-          "seq": 3,
-          "slackMin": 0,
-          "start": 852
-        }
-      ],
-      "techId": "Q2"
-    },
-    {
-      "lunch": {
         "afterSeq": 2,
         "end": 720,
         "start": 690
       },
-      "returnAt": 898,
-      "returnDriveMin": 10,
+      "returnAt": 849,
+      "returnDriveMin": 9,
       "stops": [
         {
           "arrival": 488,
           "driveMin": 8,
           "end": 548,
-          "jobId": "J18",
+          "jobId": "J06",
           "lateMin": 0,
           "seq": 1,
           "slackMin": 0,
@@ -279,7 +237,7 @@
           "arrival": 549,
           "driveMin": 1,
           "end": 609,
-          "jobId": "J06",
+          "jobId": "J18",
           "lateMin": 0,
           "seq": 2,
           "slackMin": 0,
@@ -296,24 +254,66 @@
           "start": 720
         },
         {
-          "arrival": 774,
-          "driveMin": 9,
-          "end": 825,
-          "jobId": "J16",
+          "arrival": 775,
+          "driveMin": 10,
+          "end": 840,
+          "jobId": "J14",
           "lateMin": 0,
           "seq": 4,
-          "slackMin": 6,
+          "slackMin": 5,
           "start": 780
+        }
+      ],
+      "techId": "Q2"
+    },
+    {
+      "lunch": {
+        "afterSeq": 1,
+        "end": 720,
+        "start": 690
+      },
+      "returnAt": 884,
+      "returnDriveMin": 3,
+      "stops": [
+        {
+          "arrival": 485,
+          "driveMin": 5,
+          "end": 660,
+          "jobId": "J08",
+          "lateMin": 0,
+          "seq": 1,
+          "slackMin": 115,
+          "start": 600
         },
         {
-          "arrival": 828,
-          "driveMin": 3,
-          "end": 888,
+          "arrival": 675,
+          "driveMin": 15,
+          "end": 780,
           "jobId": "J04",
           "lateMin": 0,
-          "seq": 5,
+          "seq": 2,
+          "slackMin": 45,
+          "start": 720
+        },
+        {
+          "arrival": 783,
+          "driveMin": 3,
+          "end": 828,
+          "jobId": "J16",
+          "lateMin": 0,
+          "seq": 3,
           "slackMin": 0,
-          "start": 828
+          "start": 783
+        },
+        {
+          "arrival": 836,
+          "driveMin": 8,
+          "end": 881,
+          "jobId": "J20",
+          "lateMin": 0,
+          "seq": 4,
+          "slackMin": 0,
+          "start": 836
         }
       ],
       "techId": "Q3"

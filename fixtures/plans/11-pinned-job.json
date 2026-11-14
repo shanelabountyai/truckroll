@@ -15,9 +15,9 @@
     },
     {
       "lunch": {
-        "afterSeq": 3,
-        "end": 784,
-        "start": 754
+        "afterSeq": 2,
+        "end": 720,
+        "start": 690
       },
       "returnAt": 785,
       "returnDriveMin": 1,
@@ -43,14 +43,14 @@
           "start": 588
         },
         {
-          "arrival": 694,
+          "arrival": 724,
           "driveMin": 46,
-          "end": 754,
+          "end": 784,
           "jobId": "J3",
           "lateMin": 0,
           "seq": 3,
           "slackMin": 0,
-          "start": 694
+          "start": 724
         }
       ],
       "techId": "Q1"

@@ -8,11 +8,11 @@
   "routes": [
     {
       "lunch": {
-        "afterSeq": 3,
-        "end": 734,
-        "start": 704
+        "afterSeq": 2,
+        "end": 720,
+        "start": 690
       },
-      "returnAt": 735,
+      "returnAt": 781,
       "returnDriveMin": 1,
       "stops": [
         {
@@ -38,12 +38,12 @@
         {
           "arrival": 644,
           "driveMin": 1,
-          "end": 704,
+          "end": 780,
           "jobId": "J2",
           "lateMin": 0,
           "seq": 3,
-          "slackMin": 0,
-          "start": 644
+          "slackMin": 76,
+          "start": 720
         }
       ],
       "techId": "T1"

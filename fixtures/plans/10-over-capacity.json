@@ -8,11 +8,11 @@
   "routes": [
     {
       "lunch": {
-        "afterSeq": 3,
-        "end": 784,
-        "start": 754
+        "afterSeq": 2,
+        "end": 720,
+        "start": 690
       },
-      "returnAt": 970,
+      "returnAt": 996,
       "returnDriveMin": 1,
       "stops": [
         {
@@ -38,32 +38,32 @@
         {
           "arrival": 664,
           "driveMin": 1,
-          "end": 754,
+          "end": 810,
           "jobId": "J4",
           "lateMin": 0,
           "seq": 3,
-          "slackMin": 0,
-          "start": 664
+          "slackMin": 56,
+          "start": 720
         },
         {
-          "arrival": 787,
+          "arrival": 813,
           "driveMin": 3,
-          "end": 877,
+          "end": 903,
           "jobId": "J2",
           "lateMin": 0,
           "seq": 4,
           "slackMin": 0,
-          "start": 787
+          "start": 813
         },
         {
-          "arrival": 879,
+          "arrival": 905,
           "driveMin": 2,
-          "end": 969,
+          "end": 995,
           "jobId": "J7",
           "lateMin": 0,
           "seq": 5,
           "slackMin": 0,
-          "start": 879
+          "start": 905
         }
       ],
       "techId": "T1"

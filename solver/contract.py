@@ -8,8 +8,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 SKILLS = ("install", "repair", "maintenance", "refrigerant-certified", "commercial")
 PRIORITIES = ("emergency", "standard", "maintenance")
 REASONS = ("no-skill", "no-window-fit", "over-capacity")
+# D-37: why a set of pins can't all be honoured (POST /solve answers 422 {"error": "pin-conflict", "pins": [...]}).
+PIN_CONFLICT_CODES = ("no-skill", "position-over-capacity", "no-window-fit", "position-taken", "over-capacity",
+                      "infeasible-together", "search-limit")
 LUNCH_MINUTES = 30
-DEFAULT_MAX_LATE_MIN = 60
 
 Skill = Literal["install", "repair", "maintenance", "refrigerant-certified", "commercial"]
 Priority = Literal["emergency", "standard", "maintenance"]
@@ -97,7 +99,6 @@ class Job(_Strict):
 class Problem(_Strict):
     version: Literal[1]
     date: str
-    maxLateMin: int = Field(default=DEFAULT_MAX_LATE_MIN, ge=0, le=240)
     techs: list[Tech] = Field(max_length=100)
     jobs: list[Job] = Field(max_length=1000)
 
@@ -130,7 +131,7 @@ class Stop(_Strict):
     start: int = Minute
     end: int = Minute
     slackMin: int = Field(ge=0)
-    lateMin: int = Field(ge=0)
+    lateMin: int = Field(ge=0)  # always 0 since D-36 (no lateness); kept so the wire format and Phase 2's columns hold
 
 
 class Lunch(_Strict):
@@ -156,6 +157,19 @@ class Objective(_Strict):
     unassignedEmergencies: int = Field(ge=0)
     lateMin: int = Field(ge=0)
     driveMin: int = Field(ge=0)
+
+
+class PinConflictEntry(_Strict):
+    jobId: str
+    techId: str
+    code: Literal["no-skill", "position-over-capacity", "no-window-fit", "position-taken", "over-capacity",
+                  "infeasible-together", "search-limit"]
+
+
+class PinConflictError(_Strict):
+    error: Literal["pin-conflict"]
+    pins: list[PinConflictEntry] = Field(min_length=1)
+    detail: str
 
 
 class Plan(_Strict):

@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse, Response
 
 from contract import SolveRequest
-from solve import TimeLimitExceeded, plan_json, solve
+from solve import PinConflict, TimeLimitExceeded, plan_json, solve
 
 app = FastAPI(title="truckroll-solver", version="0.1.0")
 
@@ -22,4 +22,7 @@ def solve_endpoint(req: SolveRequest) -> Response:
         plan = solve(req)
     except TimeLimitExceeded as e:
         return JSONResponse(status_code=503, content={"error": "time-limit", "detail": str(e)})
+    except PinConflict as e:
+        # D-37: a pin is never dropped or moved, so a day whose pins can't all be honoured has no plan; say which pins.
+        return Response(content=plan_json(e.body()), status_code=422, media_type="application/json")
     return Response(content=plan_json(plan), media_type="application/json")

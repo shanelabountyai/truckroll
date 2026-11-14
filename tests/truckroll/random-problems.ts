@@ -24,6 +24,7 @@ export function randomProblem(seed: number): ProblemInput {
     return t;
   });
   const nj = 4 + Math.floor(rnd() * 10);
+  const pins = new Map<string, number[]>(); // per tech: the positions pinned so far (0 = no position)
   const jobs: ProblemInput['jobs'] = Array.from({ length: nj }, (_, i) => {
     const ws = 450 + Math.floor(rnd() * 480);
     const j: ProblemInput['jobs'][number] = {
@@ -39,10 +40,19 @@ export function randomProblem(seed: number): ProblemInput {
     };
     if (rnd() < 0.2) {
       const t = pick(techs);
-      // position <= maxJobs: a larger position crashes the solver today (pre-existing; see the PR comment)
-      j.pin = { techId: t.id, ...(rnd() < 0.4 ? { position: 1 + Math.floor(rnd() * Math.min(3, t.maxJobs)) } : {}) };
+      // Pins as a dispatcher would set them (D-37: a pin that can't be honoured is a pin-conflict, not a plan, so
+      // careless pins would leave few days with a plan): only to a tech with the skill, never more pins than maxJobs,
+      // never two on one position, positions within maxJobs. Windows can still make a pin impossible; those days come
+      // back as pin-conflicts and are checked as such. Every kind of pin conflict is covered in pins.test.ts.
+      const mine = pins.get(t.id) ?? [];
+      const position = 1 + Math.floor(rnd() * Math.min(3, t.maxJobs));
+      if (t.skills.includes(j.skill) && mine.length < t.maxJobs) {
+        const positioned = rnd() < 0.4 && !mine.includes(position);
+        j.pin = { techId: t.id, ...(positioned ? { position } : {}) };
+        pins.set(t.id, [...mine, positioned ? position : 0]);
+      }
     }
     return j;
   });
-  return { version: 1, date: '2026-11-16', maxLateMin: pick([0, 30, 60]), techs, jobs };
+  return { version: 1, date: '2026-11-16', techs, jobs };
 }
