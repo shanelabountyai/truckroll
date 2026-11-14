@@ -1,0 +1,22 @@
+[project]
+name = "truckroll-solver"
+version = "0.1.0"
+description = "Truckroll dispatch solver: OR-Tools VRPTW behind POST /solve (PRD §5)"
+requires-python = ">=3.12,<3.14"
+# Exact pins (PRD §5): a solver upgrade can change plans, so it is a deliberate commit, never a drift.
+dependencies = [
+  "ortools==9.15.6755",
+  "fastapi==0.162.7",
+  "uvicorn==0.54.0",
+  "pydantic==2.14.3",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.2.0", "httpx==0.28.1"]
+
+[tool.setuptools]
+py-modules = ["app", "bench", "cli", "contract", "distance", "objective", "solve"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

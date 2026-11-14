@@ -1,0 +1,114 @@
+{
+  "name": "02-skill-split",
+  "description": "Two techs with disjoint skills; each job can only go to one of them (TR-01).",
+  "timeLimitMs": 2000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Install",
+        "skills": [
+          "install"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "T2",
+        "name": "Tech Repair",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 02-001",
+        "address": "7295 Placeholder Ave, Synthetic OK",
+        "location": {
+          "lat": 35.71355,
+          "lng": -95.36363
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "install"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 02-002",
+        "address": "8677 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.74777,
+          "lng": -95.39254
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "install"
+      },
+      {
+        "id": "J3",
+        "customer": "Customer 02-003",
+        "address": "7759 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.79364,
+          "lng": -95.41745
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J4",
+        "customer": "Customer 02-004",
+        "address": "4257 Synthetic Blvd, Synthetic OK",
+        "location": {
+          "lat": 35.76091,
+          "lng": -95.42714
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J1",
+      "J2",
+      "J3",
+      "J4"
+    ],
+    "unassigned": {}
+  }
+}

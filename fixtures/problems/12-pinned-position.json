@@ -1,0 +1,80 @@
+{
+  "name": "12-pinned-position",
+  "description": "J3 is the farthest job but is pinned to T1 at position 1.",
+  "timeLimitMs": 2000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 12-001",
+        "address": "2923 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.7495,
+          "lng": -95.36087
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 12-002",
+        "address": "1597 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.75182,
+          "lng": -95.3669
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J3",
+        "customer": "Customer 12-003",
+        "address": "5537 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.6153,
+          "lng": -95.49572
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair",
+        "pin": {
+          "techId": "T1",
+          "position": 1
+        }
+      }
+    ]
+  },
+  "expect": {
+    "unassigned": {}
+  }
+}

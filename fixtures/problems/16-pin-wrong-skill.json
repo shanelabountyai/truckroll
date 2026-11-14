@@ -1,0 +1,90 @@
+{
+  "name": "16-pin-wrong-skill",
+  "description": "J1 (install) is pinned to a repair-only tech; another tech could do it, but a pin is never moved.",
+  "timeLimitMs": 2000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Repair",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "T2",
+        "name": "Tech Install",
+        "skills": [
+          "install"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 16-001",
+        "address": "6287 Sample Ln, Synthetic OK",
+        "location": {
+          "lat": 35.78827,
+          "lng": -95.38758
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "install",
+        "pin": {
+          "techId": "T1"
+        }
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 16-002",
+        "address": "3428 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.81797,
+          "lng": -95.36756
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J2"
+    ],
+    "unassigned": {
+      "J1": [
+        "no-skill"
+      ]
+    }
+  }
+}

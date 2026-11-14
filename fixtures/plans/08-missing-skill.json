@@ -1,0 +1,64 @@
+{
+  "date": "2026-11-16",
+  "objective": {
+    "driveMin": 28,
+    "lateMin": 0,
+    "unassignedEmergencies": 1
+  },
+  "routes": [
+    {
+      "lunch": {
+        "afterSeq": 1,
+        "end": 720,
+        "start": 690
+      },
+      "returnAt": 552,
+      "returnDriveMin": 6,
+      "stops": [
+        {
+          "arrival": 486,
+          "driveMin": 6,
+          "end": 546,
+          "jobId": "J1",
+          "lateMin": 0,
+          "seq": 1,
+          "slackMin": 0,
+          "start": 486
+        }
+      ],
+      "techId": "T1"
+    },
+    {
+      "lunch": {
+        "afterSeq": 1,
+        "end": 720,
+        "start": 690
+      },
+      "returnAt": 556,
+      "returnDriveMin": 8,
+      "stops": [
+        {
+          "arrival": 488,
+          "driveMin": 8,
+          "end": 548,
+          "jobId": "J2",
+          "lateMin": 0,
+          "seq": 1,
+          "slackMin": 0,
+          "start": 488
+        }
+      ],
+      "techId": "T2"
+    }
+  ],
+  "stoppedBy": "local-optimum",
+  "unassigned": [
+    {
+      "jobId": "J3",
+      "reasons": [
+        "no-skill"
+      ]
+    }
+  ],
+  "version": 1
+}

@@ -11,9 +11,14 @@ All times are **integer minutes after local midnight** on the plan date; all dis
   keeps libm last-bit differences between V8 and CPython from flipping a whole minute. Same point → 0.
 - **Route** for one tech: leaves its start (home base, or `start` override for a re-plan) at `shiftStart` (or `start.at`),
   visits stops in `seq` order, returns home. Waiting happens at the customer.
-- **Stop timing**: `arrival = depart(prev) + drive`, `start ≥ max(arrival, windowStart)`, `end = start + duration`,
-  `slack = start − arrival`. `depart(prev)` is the previous stop's `end` (or the route start), except in the gap holding
-  lunch, where the tech eats first and then drives: `lunch.start ≥ end(prev)`, `depart = lunch.start + 30`.
+- **Stop timing**: the tech leaves as soon as the previous stop ends (`free` = previous `end`, or the route start).
+  `arrival = free + drive`, `start ≥ max(arrival, windowStart)`, `end = start + duration`, `slack = start − arrival`.
+  In the gap holding lunch (`lunch.afterSeq` = that gap, 0 = before the first stop): `lunch.start ≥ free`; if lunch
+  starts no later than `free + drive` it interrupts the drive and `arrival = free + drive + 30`, otherwise it is eaten on
+  arrival and `arrival = free + drive`; either way `lunch.end ≤ start` of the next stop (or `≤ shiftEnd` in the last
+  gap, where `returnAt` is the arrival home). This matches OR-Tools' break semantics (break during travel or waiting).
+  *(Revised during the build: the first draft had the tech always eat before driving, which is stricter than the
+  solver's model and could push a stop later than the solver planned.)*
 - **Windows**: start before `windowStart` is never allowed. Start after `windowEnd` is **late**; lateness is capped at
   `maxLateMin` (problem field, default 60) — beyond that the job does not fit (D-15).
 - **Shift**: the route must be home by `shiftEnd`. **Lunch** (30 min) starts within `[lunch.earliest, lunch.latest]`
@@ -27,9 +32,10 @@ All times are **integer minutes after local midnight** on the plan date; all dis
 - **Reason codes**: `no-skill` (no tech — or the pinned tech — has the skill), `no-window-fit` (no skilled tech could
   do the job alone inside its shift, window cap and lunch), `over-capacity` (individually feasible, but dropped by the
   solver for time or `maxJobs`). The first two come from a pre-check; the solver never sees those jobs.
-- **Determinism** (TR-04): one search worker, `PARALLEL_CHEAPEST_INSERTION` then `GUIDED_LOCAL_SEARCH` stopped by a
-  **solution limit** (not the clock); `timeLimitMs` is a hard cap, and the plan says `"stoppedBy": "time-limit"` if it
-  ever bites (determinism is only promised when it doesn't). After the search, timings are normalised by a deterministic
+- **Determinism** (TR-04): one search worker, `PARALLEL_CHEAPEST_INSERTION` then `GREEDY_DESCENT` to a local optimum,
+  bounded by a solution limit (never the clock); `timeLimitMs` is a hard cap, and the plan says
+  `"stoppedBy": "time-limit"` if it ever bites (determinism is only promised when it doesn't). *(Revised: the draft
+  said guided local search, but GLS has no natural end and ran to the clock on small fixtures — see D-18.)* After the search, timings are normalised by a deterministic
   earliest-start forward pass (never later than the solver's, so feasibility is kept). JSON is emitted with sorted keys
   and no whitespace (D-18).
 
@@ -50,7 +56,8 @@ All times are **integer minutes after local midnight** on the plan date; all dis
 | `solver/cli.py` | stdin problem → stdout plan (same code path; used by the cross-language test) |
 | `solver/bench.py` | p95 per fixture, integer ms, fails over 2000 |
 | `fixtures/geo.json` | D-10 bounding box, two shops |
-| `fixtures/problems/*.json` | `{ name, description, problem, expect }` |
+| `fixtures/problems/*.json` | `{ name, description, timeLimitMs, problem, expect }` |
+| `fixtures/plans/*.json` | golden solver plans, so the checker and metrics tests run without Python |
 | `scripts/truckroll/gen-fixtures.ts` | deterministic fixture generator (seeded PRNG) |
 | `tests/truckroll/*.test.ts` | vitest: contract, distance, checker negatives, metrics, TR-01, TR-04, cross-language |
 | `solver/tests/*.py` | pytest: contract round-trip, distance agreement, solve per fixture, `/solve` via TestClient, TR-04 |

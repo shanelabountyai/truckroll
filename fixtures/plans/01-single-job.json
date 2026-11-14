@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-16",
+  "objective": {
+    "driveMin": 16,
+    "lateMin": 0,
+    "unassignedEmergencies": 0
+  },
+  "routes": [
+    {
+      "lunch": {
+        "afterSeq": 1,
+        "end": 720,
+        "start": 690
+      },
+      "returnAt": 608,
+      "returnDriveMin": 8,
+      "stops": [
+        {
+          "arrival": 488,
+          "driveMin": 8,
+          "end": 600,
+          "jobId": "J1",
+          "lateMin": 0,
+          "seq": 1,
+          "slackMin": 52,
+          "start": 540
+        }
+      ],
+      "techId": "T1"
+    }
+  ],
+  "stoppedBy": "local-optimum",
+  "unassigned": [],
+  "version": 1
+}

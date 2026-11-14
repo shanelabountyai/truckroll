@@ -1,0 +1,71 @@
+{
+  "name": "06-lunch-squeeze",
+  "description": "Back-to-back jobs around noon: lunch must land between J1 (ends 11:30) and J2 (window 12:10–12:20).",
+  "timeLimitMs": 2000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 06-001",
+        "address": "5252 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.75769,
+          "lng": -95.38757
+        },
+        "windowStart": 540,
+        "windowEnd": 550,
+        "durationMin": 150,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 06-002",
+        "address": "5412 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.71817,
+          "lng": -95.34444
+        },
+        "windowStart": 730,
+        "windowEnd": 740,
+        "durationMin": 120,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "sequence": {
+      "T1": [
+        "J1",
+        "J2"
+      ]
+    },
+    "unassigned": {},
+    "lateMin": {
+      "max": 0
+    }
+  }
+}

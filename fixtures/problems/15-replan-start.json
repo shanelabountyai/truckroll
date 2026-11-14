@@ -1,0 +1,94 @@
+{
+  "name": "15-replan-start",
+  "description": "Mid-day re-plan: T1 is free at 13:20 at a customer site (after the lunch window), so no lunch is owed.",
+  "timeLimitMs": 2000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8,
+        "start": {
+          "point": {
+            "lat": 35.81,
+            "lng": -95.3
+          },
+          "at": 800
+        }
+      },
+      {
+        "id": "T2",
+        "name": "Tech Beta",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 15-001",
+        "address": "2430 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.74207,
+          "lng": -95.37293
+        },
+        "windowStart": 840,
+        "windowEnd": 900,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 15-002",
+        "address": "2282 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.77427,
+          "lng": -95.38137
+        },
+        "windowStart": 840,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J1",
+      "J2"
+    ],
+    "unassigned": {},
+    "noLunch": [
+      "T1"
+    ]
+  }
+}

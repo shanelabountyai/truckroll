@@ -1,0 +1,70 @@
+{
+  "name": "13-late-but-ok",
+  "description": "Two 60-minute jobs with the same 09:00–09:15 window: the second is late but inside the 60-minute cap.",
+  "timeLimitMs": 2000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 13-001",
+        "address": "5649 Placeholder Ave, Synthetic OK",
+        "location": {
+          "lat": 35.73931,
+          "lng": -95.37874
+        },
+        "windowStart": 540,
+        "windowEnd": 555,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 13-002",
+        "address": "460 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.73972,
+          "lng": -95.37262
+        },
+        "windowStart": 540,
+        "windowEnd": 555,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J1",
+      "J2"
+    ],
+    "unassigned": {},
+    "lateMin": {
+      "min": 1,
+      "max": 60
+    }
+  }
+}

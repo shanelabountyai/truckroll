@@ -1,0 +1,86 @@
+{
+  "name": "04-tight-windows",
+  "description": "One tech; three ten-minute windows force the order J1, J2, J3 regardless of geography.",
+  "timeLimitMs": 2000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J3",
+        "customer": "Customer 04-001",
+        "address": "9151 Placeholder Ave, Synthetic OK",
+        "location": {
+          "lat": 35.72563,
+          "lng": -95.40315
+        },
+        "windowStart": 840,
+        "windowEnd": 850,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J1",
+        "customer": "Customer 04-002",
+        "address": "2393 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.71409,
+          "lng": -95.33179
+        },
+        "windowStart": 510,
+        "windowEnd": 520,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 04-003",
+        "address": "6195 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.76935,
+          "lng": -95.38017
+        },
+        "windowStart": 630,
+        "windowEnd": 640,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "sequence": {
+      "T1": [
+        "J1",
+        "J2",
+        "J3"
+      ]
+    },
+    "unassigned": {},
+    "lateMin": {
+      "max": 0
+    }
+  }
+}

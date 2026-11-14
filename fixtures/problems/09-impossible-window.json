@@ -1,0 +1,87 @@
+{
+  "name": "09-impossible-window",
+  "description": "A 05:00–05:30 window; every shift starts at 08:00, past the 60-minute lateness cap.",
+  "timeLimitMs": 2000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "T2",
+        "name": "Tech Beta",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.9154,
+          "lng": -94.97
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 09-001",
+        "address": "2047 Synthetic Blvd, Synthetic OK",
+        "location": {
+          "lat": 35.69058,
+          "lng": -95.31823
+        },
+        "windowStart": 300,
+        "windowEnd": 330,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 09-002",
+        "address": "7193 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.70993,
+          "lng": -95.30259
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J2"
+    ],
+    "unassigned": {
+      "J1": [
+        "no-window-fit"
+      ]
+    }
+  }
+}
