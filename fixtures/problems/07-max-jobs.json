@@ -1,0 +1,138 @@
+{
+  "name": "07-max-jobs",
+  "description": "Two techs capped at two jobs each, six short jobs: two are over capacity.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "maintenance"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 2
+      },
+      {
+        "id": "T2",
+        "name": "Tech Beta",
+        "skills": [
+          "maintenance"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 2
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 07-001",
+        "address": "214 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.77651,
+          "lng": -95.35776
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 30,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 07-002",
+        "address": "5210 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.74587,
+          "lng": -95.3853
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 30,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J3",
+        "customer": "Customer 07-003",
+        "address": "5522 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.73337,
+          "lng": -95.39034
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 30,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J4",
+        "customer": "Customer 07-004",
+        "address": "7588 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.72973,
+          "lng": -95.37762
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 30,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J5",
+        "customer": "Customer 07-005",
+        "address": "2973 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.73568,
+          "lng": -95.34102
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 30,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J6",
+        "customer": "Customer 07-006",
+        "address": "2525 Demo Ct, Synthetic OK",
+        "location": {
+          "lat": 35.72935,
+          "lng": -95.39108
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 30,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      }
+    ]
+  },
+  "expect": {
+    "unassignedCounts": {
+      "over-capacity": 2
+    }
+  }
+}

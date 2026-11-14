@@ -73,3 +73,33 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run foundation:check-modules
+
+  # Truckroll Phase 1 (clone-owned): the Python solver, the cross-language tests that need it, and the p95 bench.
+  solver:
+    runs-on: ubuntu-latest
+    env:
+      TRUCKROLL_SOLVER_PYTHON: ${{ github.workspace }}/solver/.venv/bin/python
+      TRUCKROLL_REQUIRE_SOLVER: '1' # the solver-dependent vitest files fail here instead of skipping
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: solver/pyproject.toml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install solver (pinned in solver/pyproject.toml)
+        working-directory: solver
+        run: python -m venv .venv && .venv/bin/pip install -e '.[test]'
+      - name: pytest
+        working-directory: solver
+        run: .venv/bin/python -m pytest -q
+      - run: npm ci
+      # tests/truckroll needs no database; vitest is run directly so .env.test is not required.
+      - run: npx vitest run tests/truckroll
+      - name: Solver p95 per fixture (gate < 2000 ms)
+        working-directory: solver
+        run: .venv/bin/python bench.py 20

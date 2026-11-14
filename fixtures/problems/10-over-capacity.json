@@ -1,0 +1,148 @@
+{
+  "name": "10-over-capacity",
+  "description": "One tech, eight 90-minute jobs within two miles of the shop: five fit (450 + lunch + drives ≤ 540), three do not.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 10-001",
+        "address": "5019 Demo Ct, Synthetic OK",
+        "location": {
+          "lat": 35.75364,
+          "lng": -95.36064
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 90,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 10-002",
+        "address": "4582 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.73897,
+          "lng": -95.38219
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 90,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J3",
+        "customer": "Customer 10-003",
+        "address": "434 Demo Ct, Synthetic OK",
+        "location": {
+          "lat": 35.76056,
+          "lng": -95.38082
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 90,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J4",
+        "customer": "Customer 10-004",
+        "address": "3949 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.74623,
+          "lng": -95.35693
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 90,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J5",
+        "customer": "Customer 10-005",
+        "address": "2953 Synthetic Blvd, Synthetic OK",
+        "location": {
+          "lat": 35.76098,
+          "lng": -95.37996
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 90,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J6",
+        "customer": "Customer 10-006",
+        "address": "3909 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.74852,
+          "lng": -95.37025
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 90,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J7",
+        "customer": "Customer 10-007",
+        "address": "2986 Placeholder Ave, Synthetic OK",
+        "location": {
+          "lat": 35.74442,
+          "lng": -95.36918
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 90,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J8",
+        "customer": "Customer 10-008",
+        "address": "549 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.73405,
+          "lng": -95.38247
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 90,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "unassignedCounts": {
+      "over-capacity": 3
+    }
+  }
+}

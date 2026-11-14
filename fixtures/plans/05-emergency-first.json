@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-16",
+  "objective": {
+    "driveMin": 8,
+    "lateMin": 0,
+    "unassignedEmergencies": 0
+  },
+  "routes": [
+    {
+      "lunch": {
+        "afterSeq": 2,
+        "end": 753,
+        "start": 723
+      },
+      "returnAt": 998,
+      "returnDriveMin": 1,
+      "stops": [
+        {
+          "arrival": 482,
+          "driveMin": 2,
+          "end": 602,
+          "jobId": "E1",
+          "lateMin": 0,
+          "seq": 1,
+          "slackMin": 0,
+          "start": 482
+        },
+        {
+          "arrival": 603,
+          "driveMin": 1,
+          "end": 723,
+          "jobId": "E2",
+          "lateMin": 0,
+          "seq": 2,
+          "slackMin": 0,
+          "start": 603
+        },
+        {
+          "arrival": 755,
+          "driveMin": 2,
+          "end": 875,
+          "jobId": "M2",
+          "lateMin": 0,
+          "seq": 3,
+          "slackMin": 0,
+          "start": 755
+        },
+        {
+          "arrival": 877,
+          "driveMin": 2,
+          "end": 997,
+          "jobId": "M3",
+          "lateMin": 0,
+          "seq": 4,
+          "slackMin": 0,
+          "start": 877
+        }
+      ],
+      "techId": "T1"
+    }
+  ],
+  "stoppedBy": "local-optimum",
+  "unassigned": [
+    {
+      "jobId": "M1",
+      "reasons": [
+        "over-capacity"
+      ]
+    },
+    {
+      "jobId": "M4",
+      "reasons": [
+        "over-capacity"
+      ]
+    }
+  ],
+  "version": 1
+}

@@ -1,0 +1,8 @@
+{
+  "note": "D-10: synthetic geography only. Muskogee-area bounding box, two made-up shops. No real customers or addresses.",
+  "bbox": { "south": 35.55, "north": 36.05, "west": -95.55, "east": -94.85 },
+  "shops": [
+    { "id": "muskogee", "name": "Muskogee shop", "point": { "lat": 35.7479, "lng": -95.3697 } },
+    { "id": "tahlequah", "name": "Tahlequah shop", "point": { "lat": 35.9154, "lng": -94.97 } }
+  ]
+}

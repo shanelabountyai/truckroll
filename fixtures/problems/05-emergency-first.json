@@ -1,0 +1,125 @@
+{
+  "name": "05-emergency-first",
+  "description": "One tech, 540-minute shift, six 120-minute jobs: four fit (480 + lunch + short drives), two do not. Both emergencies must be kept.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair",
+          "maintenance"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "M1",
+        "customer": "Customer 05-001",
+        "address": "6859 Synthetic Blvd, Synthetic OK",
+        "location": {
+          "lat": 35.73669,
+          "lng": -95.36477
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 120,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "M2",
+        "customer": "Customer 05-002",
+        "address": "934 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.7567,
+          "lng": -95.37138
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 120,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "E1",
+        "customer": "Customer 05-003",
+        "address": "8975 Sample Ln, Synthetic OK",
+        "location": {
+          "lat": 35.75909,
+          "lng": -95.36008
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 120,
+        "priority": "emergency",
+        "skill": "repair"
+      },
+      {
+        "id": "M3",
+        "customer": "Customer 05-004",
+        "address": "6573 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.74652,
+          "lng": -95.37768
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 120,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "E2",
+        "customer": "Customer 05-005",
+        "address": "8886 Placeholder Ave, Synthetic OK",
+        "location": {
+          "lat": 35.75811,
+          "lng": -95.36076
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 120,
+        "priority": "emergency",
+        "skill": "repair"
+      },
+      {
+        "id": "M4",
+        "customer": "Customer 05-006",
+        "address": "2585 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.75964,
+          "lng": -95.38137
+        },
+        "windowStart": 480,
+        "windowEnd": 1020,
+        "durationMin": 120,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "E1",
+      "E2"
+    ],
+    "unassignedCounts": {
+      "over-capacity": 2
+    }
+  }
+}

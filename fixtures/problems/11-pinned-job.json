@@ -1,0 +1,102 @@
+{
+  "name": "11-pinned-job",
+  "description": "J1 is next to the Muskogee shop but the dispatcher pinned it to the Tahlequah tech.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "M1",
+        "name": "Muskogee One",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "Q1",
+        "name": "Tahlequah One",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.9154,
+          "lng": -94.97
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 11-001",
+        "address": "5113 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.75006,
+          "lng": -95.3679
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair",
+        "pin": {
+          "techId": "Q1"
+        }
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 11-002",
+        "address": "8437 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.7395,
+          "lng": -95.36909
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J3",
+        "customer": "Customer 11-003",
+        "address": "6055 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.915,
+          "lng": -94.96313
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J1",
+      "J2",
+      "J3"
+    ],
+    "unassigned": {}
+  }
+}

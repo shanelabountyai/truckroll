@@ -1,0 +1,55 @@
+{
+  "name": "01-single-job",
+  "description": "One tech, one repair job inside its window.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair",
+          "maintenance"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 01-001",
+        "address": "6245 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.75229,
+          "lng": -95.29273
+        },
+        "windowStart": 540,
+        "windowEnd": 660,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J1"
+    ],
+    "unassigned": {},
+    "lateMin": {
+      "max": 0
+    }
+  }
+}

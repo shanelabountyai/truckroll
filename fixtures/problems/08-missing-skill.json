@@ -1,0 +1,103 @@
+{
+  "name": "08-missing-skill",
+  "description": "A commercial job and nobody holds the commercial skill.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair",
+          "maintenance"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "T2",
+        "name": "Tech Beta",
+        "skills": [
+          "install"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.9154,
+          "lng": -94.97
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 08-001",
+        "address": "1631 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.71601,
+          "lng": -95.33835
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 08-002",
+        "address": "5833 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.9664,
+          "lng": -95.01179
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "install"
+      },
+      {
+        "id": "J3",
+        "customer": "Customer 08-003",
+        "address": "5064 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.75017,
+          "lng": -95.43796
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "emergency",
+        "skill": "commercial"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J1",
+      "J2"
+    ],
+    "unassigned": {
+      "J3": [
+        "no-skill"
+      ]
+    }
+  }
+}

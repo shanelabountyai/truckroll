@@ -1,0 +1,472 @@
+{
+  "name": "03-demo-day",
+  "description": "Both shops, six techs, 24 mixed jobs: the demo day. Capacity is ample, so everything is assigned.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "M1",
+        "name": "Muskogee One",
+        "skills": [
+          "install",
+          "repair",
+          "maintenance",
+          "refrigerant-certified"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "M2",
+        "name": "Muskogee Two",
+        "skills": [
+          "repair",
+          "maintenance"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "M3",
+        "name": "Muskogee Three",
+        "skills": [
+          "install",
+          "repair",
+          "commercial"
+        ],
+        "shiftStart": 420,
+        "shiftEnd": 960,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 660,
+          "latest": 750
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "Q1",
+        "name": "Tahlequah One",
+        "skills": [
+          "install",
+          "repair",
+          "maintenance",
+          "refrigerant-certified"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.9154,
+          "lng": -94.97
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "Q2",
+        "name": "Tahlequah Two",
+        "skills": [
+          "repair",
+          "maintenance",
+          "refrigerant-certified"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.9154,
+          "lng": -94.97
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      },
+      {
+        "id": "Q3",
+        "name": "Tahlequah Three",
+        "skills": [
+          "maintenance",
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.9154,
+          "lng": -94.97
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 5
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J01",
+        "customer": "Customer 03-001",
+        "address": "4570 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.8005,
+          "lng": -95.37346
+        },
+        "windowStart": 480,
+        "windowEnd": 600,
+        "durationMin": 120,
+        "priority": "standard",
+        "skill": "install"
+      },
+      {
+        "id": "J02",
+        "customer": "Customer 03-002",
+        "address": "5515 Sample Ln, Synthetic OK",
+        "location": {
+          "lat": 35.83212,
+          "lng": -94.92724
+        },
+        "windowStart": 480,
+        "windowEnd": 600,
+        "durationMin": 45,
+        "priority": "standard",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J03",
+        "customer": "Customer 03-003",
+        "address": "3271 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.70525,
+          "lng": -95.33527
+        },
+        "windowStart": 720,
+        "windowEnd": 840,
+        "durationMin": 75,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J04",
+        "customer": "Customer 03-004",
+        "address": "213 Demo Ct, Synthetic OK",
+        "location": {
+          "lat": 35.87748,
+          "lng": -94.88264
+        },
+        "windowStart": 720,
+        "windowEnd": 840,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J05",
+        "customer": "Customer 03-005",
+        "address": "7103 Sample Ln, Synthetic OK",
+        "location": {
+          "lat": 35.72148,
+          "lng": -95.32516
+        },
+        "windowStart": 600,
+        "windowEnd": 720,
+        "durationMin": 120,
+        "priority": "standard",
+        "skill": "install"
+      },
+      {
+        "id": "J06",
+        "customer": "Customer 03-006",
+        "address": "8558 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.95181,
+          "lng": -94.91274
+        },
+        "windowStart": 480,
+        "windowEnd": 600,
+        "durationMin": 60,
+        "priority": "maintenance",
+        "skill": "repair"
+      },
+      {
+        "id": "J07",
+        "customer": "Customer 03-007",
+        "address": "3748 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.8156,
+          "lng": -95.3871
+        },
+        "windowStart": 660,
+        "windowEnd": 780,
+        "durationMin": 45,
+        "priority": "standard",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J08",
+        "customer": "Customer 03-008",
+        "address": "7705 Synthetic Blvd, Synthetic OK",
+        "location": {
+          "lat": 35.94832,
+          "lng": -94.99554
+        },
+        "windowStart": 600,
+        "windowEnd": 720,
+        "durationMin": 60,
+        "priority": "emergency",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J09",
+        "customer": "Customer 03-009",
+        "address": "4669 Demo Ct, Synthetic OK",
+        "location": {
+          "lat": 35.82405,
+          "lng": -95.32718
+        },
+        "windowStart": 720,
+        "windowEnd": 840,
+        "durationMin": 120,
+        "priority": "maintenance",
+        "skill": "install"
+      },
+      {
+        "id": "J10",
+        "customer": "Customer 03-010",
+        "address": "7598 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.82863,
+          "lng": -94.96248
+        },
+        "windowStart": 780,
+        "windowEnd": 900,
+        "durationMin": 120,
+        "priority": "standard",
+        "skill": "install"
+      },
+      {
+        "id": "J11",
+        "customer": "Customer 03-011",
+        "address": "2941 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.7583,
+          "lng": -95.35413
+        },
+        "windowStart": 600,
+        "windowEnd": 720,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "refrigerant-certified"
+      },
+      {
+        "id": "J12",
+        "customer": "Customer 03-012",
+        "address": "9435 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.96553,
+          "lng": -94.916
+        },
+        "windowStart": 720,
+        "windowEnd": 840,
+        "durationMin": 45,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J13",
+        "customer": "Customer 03-013",
+        "address": "6868 Synthetic Blvd, Synthetic OK",
+        "location": {
+          "lat": 35.77214,
+          "lng": -95.27237
+        },
+        "windowStart": 600,
+        "windowEnd": 720,
+        "durationMin": 45,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J14",
+        "customer": "Customer 03-014",
+        "address": "8788 Demo Ct, Synthetic OK",
+        "location": {
+          "lat": 35.97811,
+          "lng": -95.00678
+        },
+        "windowStart": 780,
+        "windowEnd": 900,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "refrigerant-certified"
+      },
+      {
+        "id": "J15",
+        "customer": "Customer 03-015",
+        "address": "5968 Sample Ln, Synthetic OK",
+        "location": {
+          "lat": 35.77411,
+          "lng": -95.36023
+        },
+        "windowStart": 780,
+        "windowEnd": 900,
+        "durationMin": 60,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J16",
+        "customer": "Customer 03-016",
+        "address": "8412 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.90028,
+          "lng": -94.8921
+        },
+        "windowStart": 780,
+        "windowEnd": 900,
+        "durationMin": 45,
+        "priority": "emergency",
+        "skill": "repair"
+      },
+      {
+        "id": "J17",
+        "customer": "Customer 03-017",
+        "address": "2922 Demo Ct, Synthetic OK",
+        "location": {
+          "lat": 35.75257,
+          "lng": -95.43379
+        },
+        "windowStart": 720,
+        "windowEnd": 840,
+        "durationMin": 45,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J18",
+        "customer": "Customer 03-018",
+        "address": "6275 Synthetic Blvd, Synthetic OK",
+        "location": {
+          "lat": 35.95318,
+          "lng": -94.90849
+        },
+        "windowStart": 480,
+        "windowEnd": 600,
+        "durationMin": 60,
+        "priority": "maintenance",
+        "skill": "repair"
+      },
+      {
+        "id": "J19",
+        "customer": "Customer 03-019",
+        "address": "6070 Mockingbird Way, Synthetic OK",
+        "location": {
+          "lat": 35.76341,
+          "lng": -95.32406
+        },
+        "windowStart": 540,
+        "windowEnd": 660,
+        "durationMin": 45,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J20",
+        "customer": "Customer 03-020",
+        "address": "9553 Sample Ln, Synthetic OK",
+        "location": {
+          "lat": 35.89206,
+          "lng": -94.97049
+        },
+        "windowStart": 780,
+        "windowEnd": 900,
+        "durationMin": 45,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J21",
+        "customer": "Customer 03-021",
+        "address": "6676 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.74053,
+          "lng": -95.31384
+        },
+        "windowStart": 660,
+        "windowEnd": 780,
+        "durationMin": 45,
+        "priority": "maintenance",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J22",
+        "customer": "Customer 03-022",
+        "address": "9795 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.83601,
+          "lng": -95.03302
+        },
+        "windowStart": 600,
+        "windowEnd": 720,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "maintenance"
+      },
+      {
+        "id": "J23",
+        "customer": "Customer 03-023",
+        "address": "8324 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.66079,
+          "lng": -95.40266
+        },
+        "windowStart": 780,
+        "windowEnd": 900,
+        "durationMin": 75,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "J24",
+        "customer": "Customer 03-024",
+        "address": "4137 Sample Ln, Synthetic OK",
+        "location": {
+          "lat": 35.8192,
+          "lng": -94.96065
+        },
+        "windowStart": 480,
+        "windowEnd": 600,
+        "durationMin": 45,
+        "priority": "emergency",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "unassigned": {}
+  }
+}

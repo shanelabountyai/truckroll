@@ -1,0 +1,94 @@
+{
+  "date": "2026-11-16",
+  "objective": {
+    "driveMin": 10,
+    "lateMin": 0,
+    "unassignedEmergencies": 0
+  },
+  "routes": [
+    {
+      "lunch": {
+        "afterSeq": 2,
+        "end": 720,
+        "start": 690
+      },
+      "returnAt": 996,
+      "returnDriveMin": 1,
+      "stops": [
+        {
+          "arrival": 481,
+          "driveMin": 1,
+          "end": 571,
+          "jobId": "J6",
+          "lateMin": 0,
+          "seq": 1,
+          "slackMin": 0,
+          "start": 481
+        },
+        {
+          "arrival": 573,
+          "driveMin": 2,
+          "end": 663,
+          "jobId": "J1",
+          "lateMin": 0,
+          "seq": 2,
+          "slackMin": 0,
+          "start": 573
+        },
+        {
+          "arrival": 664,
+          "driveMin": 1,
+          "end": 810,
+          "jobId": "J4",
+          "lateMin": 0,
+          "seq": 3,
+          "slackMin": 56,
+          "start": 720
+        },
+        {
+          "arrival": 813,
+          "driveMin": 3,
+          "end": 903,
+          "jobId": "J2",
+          "lateMin": 0,
+          "seq": 4,
+          "slackMin": 0,
+          "start": 813
+        },
+        {
+          "arrival": 905,
+          "driveMin": 2,
+          "end": 995,
+          "jobId": "J7",
+          "lateMin": 0,
+          "seq": 5,
+          "slackMin": 0,
+          "start": 905
+        }
+      ],
+      "techId": "T1"
+    }
+  ],
+  "stoppedBy": "local-optimum",
+  "unassigned": [
+    {
+      "jobId": "J3",
+      "reasons": [
+        "over-capacity"
+      ]
+    },
+    {
+      "jobId": "J5",
+      "reasons": [
+        "over-capacity"
+      ]
+    },
+    {
+      "jobId": "J8",
+      "reasons": [
+        "over-capacity"
+      ]
+    }
+  ],
+  "version": 1
+}

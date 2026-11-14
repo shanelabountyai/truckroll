@@ -15,3 +15,9 @@ uploads/
 next-env.d.ts
 .DS_Store
 spikes/**/generated/
+
+# Truckroll solver (Python)
+solver/.venv/
+__pycache__/
+.pytest_cache/
+*.egg-info/

@@ -1,0 +1,103 @@
+{
+  "name": "14-all-reasons",
+  "description": "One job per reason: commercial with no commercial tech, a 04:00 window, and two jobs for a tech capped at one.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 1
+      }
+    ],
+    "jobs": [
+      {
+        "id": "NS",
+        "customer": "Customer 14-001",
+        "address": "4489 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.74961,
+          "lng": -95.39308
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "commercial"
+      },
+      {
+        "id": "NW",
+        "customer": "Customer 14-002",
+        "address": "2004 Fictional St, Synthetic OK",
+        "location": {
+          "lat": 35.77545,
+          "lng": -95.44799
+        },
+        "windowStart": 240,
+        "windowEnd": 270,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      },
+      {
+        "id": "C1",
+        "customer": "Customer 14-003",
+        "address": "9264 Demo Ct, Synthetic OK",
+        "location": {
+          "lat": 35.72569,
+          "lng": -95.43969
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "maintenance",
+        "skill": "repair"
+      },
+      {
+        "id": "C2",
+        "customer": "Customer 14-004",
+        "address": "7541 Example Rd, Synthetic OK",
+        "location": {
+          "lat": 35.69393,
+          "lng": -95.39581
+        },
+        "windowStart": 480,
+        "windowEnd": 960,
+        "durationMin": 60,
+        "priority": "emergency",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "C2"
+    ],
+    "unassigned": {
+      "NS": [
+        "no-skill"
+      ],
+      "NW": [
+        "no-window-fit"
+      ],
+      "C1": [
+        "over-capacity"
+      ]
+    }
+  }
+}
