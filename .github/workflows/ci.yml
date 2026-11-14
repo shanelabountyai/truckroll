@@ -63,9 +63,9 @@ jobs:
           echo "RLS_MODE=enforce" >> "$GITHUB_ENV"
           echo "DATABASE_URL_SYSTEM=$DATABASE_URL" >> "$GITHUB_ENV"
           echo "DATABASE_URL=postgresql://app_rw:app_rw@localhost:5432/$db?connection_limit=8&pool_timeout=20" >> "$GITHUB_ENV"
-      - run: npx vitest run
-      # Production build, served — the way it ships. login.spec.ts drives a real page.
-      # Truckroll: e2e/dispatch.spec.ts plans a day through the real solver service (PRD §5), started here on :7801.
+      # Truckroll Phase 3 (D-46): the solver service starts before vitest, so TR-03 (tests/truckroll/tr-03-replan.test.ts)
+      # re-plans through the real solver here and the solver-dependent tests can't skip (TRUCKROLL_REQUIRE_SOLVER=1).
+      # e2e/dispatch.spec.ts then plans and re-plans the demo day through the same service on :7801 (PRD §5).
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -77,6 +77,11 @@ jobs:
           python -m venv .venv && .venv/bin/pip install -q -e .
           nohup .venv/bin/uvicorn app:app --host 127.0.0.1 --port 7801 > "$RUNNER_TEMP/solver.log" 2>&1 &
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:7801/health && exit 0; sleep 1; done; cat "$RUNNER_TEMP/solver.log"; exit 1
+      - run: npx vitest run
+        env:
+          SOLVER_URL: http://127.0.0.1:7801
+          TRUCKROLL_REQUIRE_SOLVER: '1'
+      # Production build, served — the way it ships. login.spec.ts drives a real page.
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
         env:
@@ -120,7 +125,7 @@ jobs:
       - run: npm ci
       # The solver-dependent files only: they need no database, so vitest runs without .env.test. The rest of
       # tests/truckroll (TR-02, TR-05, actions) needs Postgres and runs in the ci job.
-      - run: npx vitest run tests/truckroll/cross-language.test.ts tests/truckroll/tr-01-skills.test.ts tests/truckroll/tr-04-determinism.test.ts tests/truckroll/reasons-live.test.ts tests/truckroll/pins.test.ts tests/truckroll/solver-client.test.ts
+      - run: npx vitest run tests/truckroll/cross-language.test.ts tests/truckroll/tr-01-skills.test.ts tests/truckroll/tr-04-determinism.test.ts tests/truckroll/reasons-live.test.ts tests/truckroll/pins.test.ts tests/truckroll/solver-client.test.ts tests/truckroll/replan.test.ts
       - name: Solver p95 per fixture (gate < 2000 ms)
         working-directory: solver
         run: .venv/bin/python bench.py 20
