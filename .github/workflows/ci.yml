@@ -120,7 +120,7 @@ jobs:
       - run: npm ci
       # The solver-dependent files only: they need no database, so vitest runs without .env.test. The rest of
       # tests/truckroll (TR-02, TR-05, actions) needs Postgres and runs in the ci job.
-      - run: npx vitest run tests/truckroll/cross-language.test.ts tests/truckroll/tr-01-skills.test.ts tests/truckroll/tr-04-determinism.test.ts tests/truckroll/reasons-live.test.ts
+      - run: npx vitest run tests/truckroll/cross-language.test.ts tests/truckroll/tr-01-skills.test.ts tests/truckroll/tr-04-determinism.test.ts tests/truckroll/reasons-live.test.ts tests/truckroll/pins.test.ts tests/truckroll/solver-client.test.ts
       - name: Solver p95 per fixture (gate < 2000 ms)
         working-directory: solver
         run: .venv/bin/python bench.py 20

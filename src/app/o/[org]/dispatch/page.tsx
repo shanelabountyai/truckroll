@@ -14,6 +14,13 @@ export const metadata = { title: 'Dispatch' };
 
 const cell = { textAlign: 'left' as const, padding: '2px 10px 2px 0', verticalAlign: 'top' as const };
 
+// Why a job is unassigned, for the dispatcher. Jobs are scheduled only inside their window (D-36), never late.
+const REASON_TEXT: Record<string, string> = {
+  'no-skill': 'no technician has the skill',
+  'no-window-fit': 'no technician can get there inside its window',
+  'over-capacity': 'no route has room for it inside its window',
+};
+
 // The dispatcher board (PRD §7 Phase 2): the day's jobs with pins, the technicians, Plan the day, and the current plan
 // as one timeline per technician.
 export default async function DispatchBoard({ params, searchParams }: { params: Promise<{ org: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
@@ -55,7 +62,9 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
       <ActionForm action={bind(planDay)}>
         <input type="hidden" name="date" value={date} />
         <button type="submit" disabled={!jobs.length || !techs.length}>Plan the day</button>{' '}
-        <small>A pinned job is only ever planned on its pinned tech (at its pinned position); if that can&apos;t work, it comes back unassigned with the reason. Every plan is checked before it is saved.</small>
+        <small>
+          Pinned jobs never move: each is planned on its pinned tech, at its pinned position if it has one. If the pins can&apos;t all be kept, nothing is planned and you are told which pins to change. Jobs are scheduled only inside their window; a job no tech can reach in its window stays unassigned. Every plan is checked before it is saved.
+        </small>
       </ActionForm>
 
       <h2>Plan</h2>
@@ -84,7 +93,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
               <ul>
                 {plan.unassigned.map((u) => (
                   <li key={u.jobId}>
-                    {jobInfo.get(u.jobId)?.ref ?? 'removed job'} — {u.reasons.join(', ')}
+                    {jobInfo.get(u.jobId)?.ref ?? 'removed job'} — {u.reasons.map((r) => REASON_TEXT[r] ?? r).join('; ')}
                   </li>
                 ))}
               </ul>

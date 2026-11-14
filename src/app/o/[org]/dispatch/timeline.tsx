@@ -43,7 +43,7 @@ export function TechTimeline({
         {stops.map((s) => {
           const j = jobs.get(s.jobId);
           return (
-            <div key={s.jobId} title={`${j?.ref ?? s.jobId} ${hhmm(s.start)}–${hhmm(s.end)}`} style={{ position: 'absolute', left: pct(s.start), width: width(s.start, s.end), top: 2, bottom: 2, background: COLORS[j?.priority ?? 'standard'], color: '#fff', fontSize: 11, overflow: 'hidden', whiteSpace: 'nowrap', borderRadius: 3, padding: '0 3px', boxSizing: 'border-box', outline: s.lateMin ? '2px solid #000' : undefined }}>
+            <div key={s.jobId} title={`${j?.ref ?? s.jobId} ${hhmm(s.start)}–${hhmm(s.end)}`} style={{ position: 'absolute', left: pct(s.start), width: width(s.start, s.end), top: 2, bottom: 2, background: COLORS[j?.priority ?? 'standard'], color: '#fff', fontSize: 11, overflow: 'hidden', whiteSpace: 'nowrap', borderRadius: 3, padding: '0 3px', boxSizing: 'border-box'}}>
               {j?.ref}
             </div>
           );
@@ -54,7 +54,7 @@ export function TechTimeline({
           <caption style={{ textAlign: 'left' }}>Stops for {name}</caption>
           <thead>
             <tr>
-              {['#', 'Job', 'Customer', 'Window', 'Arrive', 'Work', 'Drive', 'Late'].map((h) => (
+              {['#', 'Job', 'Customer', 'Window', 'Arrive', 'Work', 'Drive'].map((h) => (
                 <th key={h} style={{ textAlign: 'left', paddingRight: 12 }}>{h}</th>
               ))}
             </tr>
@@ -72,7 +72,6 @@ export function TechTimeline({
                   <td style={td}>{hhmm(s.arrival)}</td>
                   <td style={td}>{hhmm(s.start)}–{hhmm(s.end)}</td>
                   <td style={td}>{s.driveMin} min</td>
-                  <td style={td}>{s.lateMin ? `${s.lateMin} min` : '—'}</td>
                 </tr>
               );
             })}

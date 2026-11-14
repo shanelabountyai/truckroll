@@ -20,7 +20,7 @@ export default async function StopPage({ params }: { params: Promise<{ org: stri
         <dt>Customer</dt><dd>{s.job.customer}</dd>
         <dt>Address</dt><dd>{s.job.address}</dd>
         <dt>Technician</dt><dd>{s.tech.name}, stop {s.seq}</dd>
-        <dt>Planned</dt><dd>arrive {hhmm(s.arrival)}, work {hhmm(s.start)}–{hhmm(s.end)} ({s.driveMin} min drive{s.lateMin ? `, ${s.lateMin} min late` : ''})</dd>
+        <dt>Planned</dt><dd>arrive {hhmm(s.arrival)}, work {hhmm(s.start)}–{hhmm(s.end)} ({s.driveMin} min drive)</dd>
         <dt>Window</dt><dd>{hhmm(s.job.windowStart)}–{hhmm(s.job.windowEnd)}</dd>
         <dt>Skill · priority</dt><dd>{s.job.skill} · {s.job.priority}</dd>
       </dl>

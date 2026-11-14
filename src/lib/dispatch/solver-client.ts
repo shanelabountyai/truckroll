@@ -1,4 +1,4 @@
-import type { ProblemInput } from './contract';
+import { PinConflictError, type ProblemInput } from './contract';
 
 // The app's only way to the Python solver (PRD §5): POST $SOLVER_URL/solve. The response is untrusted JSON; the caller
 // runs it through checkPlan before anything is saved (D-03, TR-02). SOLVER_URL is read here rather than in core env.ts,
@@ -25,6 +25,13 @@ export async function solveProblem(problem: ProblemInput, timeLimitMs = SOLVE_TI
     });
   } catch (e) {
     throw new SolverUnavailable((e as Error).name === 'TimeoutError' ? 'timed out' : 'not reachable');
+  }
+  if (res.status === 422) {
+    // D-37: the pins can't all be kept, so there is no plan. Hand the (untrusted) pin-conflict body back for the checker
+    // to verify (checkPinConflict); any other 422 is a request the solver refused.
+    const body: unknown = await res.json().catch(() => null);
+    if (PinConflictError.safeParse(body).success) return body;
+    throw new SolverUnavailable('HTTP 422');
   }
   if (!res.ok) throw new SolverUnavailable(`HTTP ${res.status}`);
   try {

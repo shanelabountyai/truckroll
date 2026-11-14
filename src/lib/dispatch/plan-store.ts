@@ -3,8 +3,9 @@ import { inOrg, type OrgCtx } from '@/core/authz/guards';
 import type { Tx } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import type { Prisma } from '@/generated/prisma/client';
-import { checkPlan } from './check';
-import { Problem, type Plan, type ProblemInput } from './contract';
+import { checkPinConflict, checkPlan } from './check';
+import { PinConflictError, Problem, type PinConflictEntry, type Plan, type ProblemInput } from './contract';
+import { describePinConflicts, pinConflicts } from './pins';
 import { dayOf } from './time';
 
 // The database side of planning (Phase 2): build a solver Problem from an org's day, and save a plan only after the
@@ -60,13 +61,36 @@ export async function buildProblem(tx: Tx, orgId: string, date: string): Promise
   return problem;
 }
 
-export type SaveResult = { ok: true; planId: string } | { ok: false; codes: string[] };
+export type SaveResult = { ok: true; planId: string } | { ok: false; codes: string[]; pinConflict?: string };
+
+/**
+ * D-37: pinned jobs are never dropped or moved, so when the day's pins can't all be kept there is no plan. One
+ * message for the dispatcher naming each pin to change, with job numbers. Null when the pins are fine.
+ */
+export async function pinConflictMessage(tx: Tx, orgId: string, problem: ProblemInput, pins?: PinConflictEntry[]): Promise<string | null> {
+  const parsed = Problem.parse(problem);
+  const list = pins ?? pinConflicts(parsed);
+  if (!list.length) return null;
+  const refs = new Map((await tx.job.findMany({ where: { orgId, id: { in: list.map((p) => p.jobId) } }, select: { id: true, ref: true } })).map((j) => [j.id, j.ref]));
+  const lines = describePinConflicts(parsed, list, (id) => `Job ${refs.get(id) ?? id}`);
+  return `This day can't be planned: pinned jobs are never moved or dropped, and these pins can't all be kept. ${[...new Set(lines)].join(' ')} Change or remove those pins, then plan again. Nothing was saved.`;
+}
 
 /**
  * TR-02: the checker decides. A rejected plan writes nothing but an audit row naming the checker's codes.
  * An accepted one writes the plan, its stops and the job statuses together.
  */
 export async function savePlanIfValid(tx: Tx, ctx: OrgCtx, problem: ProblemInput, solverOutput: unknown): Promise<SaveResult> {
+  // D-37: the solver's pin-conflict answer (no plan). Verified, never trusted: it must name exactly the pins the checker
+  // finds at fault. Either way nothing is saved but the audit row.
+  const conflict = PinConflictError.safeParse(solverOutput);
+  if (conflict.success) {
+    const verdict = checkPinConflict(problem, conflict.data);
+    const codes = verdict.ok ? ['pin-conflict'] : ['invalid-pin-conflict'];
+    await audit(ctx, 'dispatch.plan_rejected', { targetType: 'day', targetId: problem.date, data: { codes, pins: conflict.data.pins.slice(0, 20), errors: verdict.errors.map((e) => e.message) } }, tx);
+    if (!verdict.ok) return { ok: false, codes };
+    return { ok: false, codes, pinConflict: (await pinConflictMessage(tx, ctx.orgId, problem, conflict.data.pins))! };
+  }
   const res = checkPlan(problem, solverOutput);
   if (!res.ok || !res.metrics) {
     const codes = [...new Set(res.errors.map((e) => e.code))].sort();

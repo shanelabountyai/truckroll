@@ -125,3 +125,48 @@ describe('TR-02: a plan the checker rejects is never persisted', () => {
     for (const p of plans) expect(checkPlan(p.problem, p.plan).errors).toEqual([]);
   });
 });
+
+// D-37 (Shane, 2026-11-14): pinned jobs are never dropped or moved. Pins that can't all be kept mean no plan, and the
+// dispatcher is told which pins to change.
+describe('pin conflicts: nothing saved, and the board says which pins to change', () => {
+  it('a pin position past the tech’s maxJobs (it used to crash the solver) → refused by name, solver not called', async () => {
+    const tech = seeded.techByName.get('Tahlequah Three')!; // maxJobs 5
+    await db.job.update({ where: { id: seeded.job.get('J01')! }, data: { pinTechId: tech, pinPosition: 9 } });
+    const r = await run();
+    expect(r.error).toMatch(/pinned jobs are never moved or dropped/);
+    expect(r.error).toContain('Job J01 is pinned to Tahlequah Three at #9, but Tahlequah Three takes at most 5 jobs.');
+    expect(solve).not.toHaveBeenCalled();
+    expect(await counts()).toEqual(NOTHING);
+  });
+
+  it('a pin to a tech without the skill (set before pin-time checks, or a skill since removed) → refused by name', async () => {
+    const tech = seeded.techByName.get('Muskogee Two')!; // repair + maintenance only
+    const install = (await db.job.findFirst({ where: { orgId, skill: 'install' }, select: { id: true, ref: true } }))!;
+    await db.job.update({ where: { id: install.id }, data: { pinTechId: tech } });
+    const r = await run();
+    expect(r.error).toContain(`Job ${install.ref} is pinned to Muskogee Two, who doesn't have the install skill.`);
+    expect(await counts()).toEqual(NOTHING);
+  });
+
+  it('a pin-conflict from the solver for a day whose pins are fine is not believed → refused, nothing saved', async () => {
+    solve.mockResolvedValueOnce({ error: 'pin-conflict', pins: [{ code: 'infeasible-together', jobId: seeded.job.get('J01')!, techId: seeded.techByName.get('Muskogee One')! }], detail: 'x' });
+    const r = await run();
+    expect(r.error).toMatch(/failed the checks \(invalid-pin-conflict\)/);
+    expect(await counts()).toEqual(NOTHING);
+    const audit = await db.auditEvent.findMany({ where: { orgId, action: 'dispatch.plan_rejected' } });
+    expect((audit[0]!.data as { codes: string[] }).codes).toEqual(['invalid-pin-conflict']);
+  });
+
+  it('a plan that drops a pinned job is refused (pin-dropped)', async () => {
+    const tech = seeded.techByName.get('Tahlequah One')!;
+    const j = seeded.job.get('J02')!;
+    await db.job.update({ where: { id: j }, data: { pinTechId: tech } });
+    const golden = translatedGolden(FIX, seeded); // J02 may sit anywhere in it; take it off its route and call it unassigned
+    for (const route of golden.routes) route.stops = route.stops.filter((s) => s.jobId !== j);
+    golden.unassigned.push({ jobId: j, reasons: ['over-capacity'] });
+    solve.mockResolvedValueOnce(golden);
+    const r = await run();
+    expect(r.error).toContain('pin-dropped');
+    expect(await counts()).toEqual(NOTHING);
+  });
+});

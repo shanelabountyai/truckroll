@@ -8,7 +8,7 @@ import { withOrg } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import { LUNCH_MINUTES, PRIORITIES, SKILLS } from '@/lib/dispatch/contract';
 import { DISPATCH } from '@/lib/dispatch/roles';
-import { buildProblem, lockDispatch, savePlanIfValid } from '@/lib/dispatch/plan-store';
+import { buildProblem, lockDispatch, pinConflictMessage, savePlanIfValid } from '@/lib/dispatch/plan-store';
 import { solveProblem, SolverUnavailable } from '@/lib/dispatch/solver-client';
 import { DATE_RE, dayOf, isRealDay, parseHHMM } from '@/lib/dispatch/time';
 
@@ -129,7 +129,16 @@ export const unpinJob = orgAction(DISPATCH, z.object({ id: ref('job') }), async 
  * save. The problem is rebuilt inside the write transaction; if the day changed while the solver ran, nothing is saved.
  */
 export const planDay = orgAction(DISPATCH, z.object({ date }), async (ctx, { date: d }) => {
-  const problem = await withOrg(ctx, (tx) => buildProblem(tx, ctx.orgId, d), { atomic: false });
+  const { problem, pins } = await withOrg(
+    ctx,
+    async (tx) => {
+      const problem = await buildProblem(tx, ctx.orgId, d);
+      return { problem, pins: await pinConflictMessage(tx, ctx.orgId, problem) };
+    },
+    { atomic: false },
+  );
+  // D-37: pins the checker already knows can't all be kept → say which, without asking the solver for a plan it can't give.
+  if (pins) throw new Refused(pins);
   let output: unknown;
   try {
     output = await solveProblem(problem);
@@ -143,6 +152,7 @@ export const planDay = orgAction(DISPATCH, z.object({ date }), async (ctx, { dat
     if (JSON.stringify(again) !== JSON.stringify(problem)) throw new Refused('Jobs changed while planning. Nothing was saved; plan again.');
     return savePlanIfValid(tx, ctx, problem, output);
   });
+  if (!result.ok && result.pinConflict) throw new Refused(result.pinConflict);
   if (!result.ok) throw new Refused(`The planner returned a plan that failed the checks (${result.codes.join(', ')}). Nothing was saved.`);
   redirect(`${board(ctx, d)}&saved=1`);
 });
