@@ -1,0 +1,128 @@
+{
+  "name": "18-replan-pin-outranks-emergency",
+  "description": "Mid-day re-plan at 10:40 (Phase 3): T1 has one slot left and J1 is pinned to it (position 1 of the rest of its day). The refrigerant emergency E1 only T1 could do stays unassigned (over-capacity): a pin outranks an emergency (D-37). The repair emergency E2 goes to T2.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair",
+          "maintenance",
+          "refrigerant-certified"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 1,
+        "start": {
+          "point": {
+            "lat": 35.76,
+            "lng": -95.35
+          },
+          "at": 640
+        }
+      },
+      {
+        "id": "T2",
+        "name": "Tech Beta",
+        "skills": [
+          "repair",
+          "maintenance"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8,
+        "start": {
+          "point": {
+            "lat": 35.74,
+            "lng": -95.38
+          },
+          "at": 640
+        }
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 18-001",
+        "address": "4001 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.7521,
+          "lng": -95.41787
+        },
+        "windowStart": 660,
+        "windowEnd": 900,
+        "durationMin": 60,
+        "priority": "maintenance",
+        "skill": "maintenance",
+        "pin": {
+          "techId": "T1",
+          "position": 1
+        }
+      },
+      {
+        "id": "E1",
+        "customer": "Customer 18-002",
+        "address": "7977 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.78219,
+          "lng": -95.41621
+        },
+        "windowStart": 640,
+        "windowEnd": 840,
+        "durationMin": 60,
+        "priority": "emergency",
+        "skill": "refrigerant-certified"
+      },
+      {
+        "id": "E2",
+        "customer": "Customer 18-003",
+        "address": "1484 Testbed Dr, Synthetic OK",
+        "location": {
+          "lat": 35.7305,
+          "lng": -95.36838
+        },
+        "windowStart": 640,
+        "windowEnd": 840,
+        "durationMin": 60,
+        "priority": "emergency",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J1",
+      "E2"
+    ],
+    "unassigned": {
+      "E1": [
+        "over-capacity"
+      ]
+    },
+    "sequence": {
+      "T1": [
+        "J1"
+      ]
+    }
+  }
+}

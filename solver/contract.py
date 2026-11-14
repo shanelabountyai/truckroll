@@ -49,6 +49,7 @@ class Tech(_Strict):
     lunch: LunchWindow
     maxJobs: int = Field(ge=0, le=50)
     start: Optional[Start] = None
+    lunchTaken: Optional[bool] = None  # re-plan (D-41): lunch already taken today, none owed on the rest of the route
 
     @model_validator(mode="after")
     def _shift(self) -> "Tech":
@@ -66,7 +67,7 @@ class Tech(_Strict):
         return self.start or Start(point=self.home, at=self.shiftStart)
 
     def lunch_required(self) -> bool:
-        return self.route_start().at <= self.lunch.latest
+        return not self.lunchTaken and self.route_start().at <= self.lunch.latest
 
     def lunch_earliest(self) -> int:
         return max(self.lunch.earliest, self.route_start().at)

@@ -55,9 +55,9 @@ export function routeStart(t: Tech): { point: Point; at: number } {
   return t.start ?? { point: t.home, at: t.shiftStart };
 }
 
-/** Lunch is owed on a non-empty route unless the tech starts after the lunch window has closed (mid-day re-plan). */
+/** Lunch is owed on a non-empty route unless already taken (D-41) or the tech starts after the lunch window (D-16). */
 export function lunchRequired(t: Tech): boolean {
-  return routeStart(t).at <= t.lunch.latest;
+  return !t.lunchTaken && routeStart(t).at <= t.lunch.latest;
 }
 
 export function checkPlan(problemInput: unknown, planInput: unknown): CheckResult {

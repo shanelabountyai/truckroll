@@ -43,6 +43,8 @@ export const Tech = z
     maxJobs: z.number().int().min(0).max(50),
     // Re-plan: where and when the tech is free (defaults: home at shiftStart). The route still ends at home.
     start: z.object({ point: Point, at: minute }).strict().optional(),
+    // Re-plan (D-41): the tech already took lunch today, so the rest of the route owes none.
+    lunchTaken: z.boolean().optional(),
   })
   .strict()
   .superRefine((t, ctx) => {

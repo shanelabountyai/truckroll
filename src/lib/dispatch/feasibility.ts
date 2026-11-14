@@ -7,7 +7,8 @@ import { driveMinutes } from './distance';
 // plan cannot drop jobs it could have done (review of PR #1, must-fix 2).
 
 const start = (t: Tech) => t.start ?? { point: t.home, at: t.shiftStart };
-const lunchRequired = (t: Tech) => start(t).at <= t.lunch.latest;
+/** Lunch is owed on a non-empty route unless already taken (D-41) or the tech starts after the lunch window (D-16). */
+export const lunchRequired = (t: Tech) => !t.lunchTaken && start(t).at <= t.lunch.latest;
 const lunchEarliest = (t: Tech) => Math.max(t.lunch.earliest, start(t).at);
 
 /** Earliest-start schedule with lunch in gap `lunchGap` (null = no lunch). True if every constraint holds. */

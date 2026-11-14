@@ -207,6 +207,17 @@ describe('checker catches planted defects', () => {
   });
 });
 
+// Phase 3, D-41: a re-plan for a tech who already took lunch owes none on the rest of the route.
+describe('lunchTaken (re-plan)', () => {
+  it('the golden plan passes with no lunch on T1; without lunchTaken the same plan is lunch-missing', () => {
+    const f = fx('17-replan-lunch-taken');
+    expect(codes(f.problem, goldenPlan(f.name))).toEqual([]);
+    const owed = structuredClone(f.problem);
+    delete owed.techs[0]!.lunchTaken;
+    expect(codes(owed, goldenPlan(f.name))).toContain('lunch-missing');
+  });
+});
+
 // PR #1 review must-fix 2, with plans that are otherwise valid (empty routes, or the route re-timed without the job), so
 // only the unassigned verdicts can fail them: a made-up reason is `reason`, a false `over-capacity` is `droppable-job`.
 describe('checker rejects plans that drop jobs (otherwise-valid plans)', () => {

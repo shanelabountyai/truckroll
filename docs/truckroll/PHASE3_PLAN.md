@@ -51,8 +51,8 @@ Input: the day's current saved plan, the day's jobs with statuses, the techs, an
 ## Tasks
 
 1. This plan (first commit).
-2. Contract `lunchTaken` (TS + Py), checker/feasibility/solver honour it; fixtures `17-replan-emergency`,
-   `18-replan-lunch-taken` + goldens; pytest + cross-language coverage.
+2. Contract `lunchTaken` (TS + Py), checker/feasibility/solver honour it; fixtures `17-replan-lunch-taken`,
+   `18-replan-pin-outranks-emergency` + goldens; pytest + cross-language coverage.
 3. Schema: `Job.enRouteAt/onSiteAt/doneAt/statusNote`, `DispatchPlan.asOf/basePlanId`; hand-written migration (D-24 CI
    diff proves it).
 4. `replan.ts` (build, merge, checkReplan, merged metrics) + `plan-store.ts` day-state loader and save path.
