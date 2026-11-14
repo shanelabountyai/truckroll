@@ -19,21 +19,23 @@ All times are **integer minutes after local midnight** on the plan date; all dis
   gap, where `returnAt` is the arrival home). This matches OR-Tools' break semantics (break during travel or waiting).
   *(Revised during the build: the first draft had the tech always eat before driving, which is stricter than the
   solver's model and could push a stop later than the solver planned.)*
-- **Windows**: start before `windowStart` is never allowed. Start after `windowEnd` is **late**; lateness is capped at
-  `maxLateMin` (problem field, default 60) — beyond that the job does not fit (D-15).
+- **Windows** (hard, D-36, which supersedes D-15): a stop starts inside `[windowStart, windowEnd]`; arriving early means
+  waiting. There is no lateness: a job no route can reach inside its window is unassigned (`no-window-fit` or
+  `over-capacity`, both re-derived by the checker). `lateMin` stays in the plan and is always 0.
 - **Shift**: the route must be home by `shiftEnd`. **Lunch** (30 min) starts within `[lunch.earliest, lunch.latest]`
   and is required on every non-empty route; empty routes carry `lunch: null` (D-16).
 - **Capacity**: at most `maxJobs` stops per tech.
-- **Pins**: `pin.techId` (and optional 1-based `pin.position`) are hard; a pinned job that cannot be honoured comes back
-  unassigned instead of breaking the solve (D-17).
-- **Objective** (D-04, lexicographic via penalties in `solver/objective.py`): pinned drop 10^10 > emergency drop 10^9 >
-  standard drop 10^6 > maintenance drop 10^5 > lateness 10^3 per minute > drive 1 per minute. With `maxLateMin` = 60 a
-  job's worst lateness (6·10^4) costs less than dropping any job.
-- **Reason codes**: `no-skill` (no tech — or the pinned tech — has the skill), `no-window-fit` (no skilled tech could
-  do the job alone inside its shift, window cap and lunch), `over-capacity` (individually feasible, but it cannot be
+- **Pins**: `pin.techId` (and optional 1-based `pin.position`) are hard, and a pinned job is never dropped or moved
+  (D-37, which supersedes D-17). Pins that can't all be honoured give no plan but a pin-conflict (HTTP 422, CLI exit 4)
+  naming each pin at fault; the checker re-derives that list (`pins.ts`).
+- **Objective** (D-04, lexicographic via penalties in `solver/objective.py`): emergency drop 10^9 > standard drop 10^6 >
+  maintenance drop 10^5 > drive 1 per minute. Pinned jobs are mandatory (no drop penalty, D-37); there is no lateness
+  tier (D-36). *(Revised 2026-11-14.)*
+- **Reason codes**: `no-skill` (no tech has the skill), `no-window-fit` (no skilled tech could
+  do the job alone inside its shift, window and lunch), `over-capacity` (individually feasible, but it cannot be
   added anywhere in the returned plan's routes). The first two come from a pre-check; the solver never sees those
   jobs. After the search a deterministic repair pass inserts any unrouted job that still fits (pinned first, then by
-  priority; cheapest by lateness, then drive), so `over-capacity` is always true, including when OR-Tools returns no
+  priority; cheapest by drive), so `over-capacity` is always true, including when OR-Tools returns no
   solution. The checker re-derives every reason (D-32). *(Revised 2026-11-14, PR #1 review.)*
 - **Determinism** (TR-04): one search worker, `PARALLEL_CHEAPEST_INSERTION` then `GREEDY_DESCENT` to a local optimum,
   bounded by a solution limit (never the clock); `timeLimitMs` is a hard cap, and a search that hits it returns
@@ -82,10 +84,11 @@ All times are **integer minutes after local midnight** on the plan date; all dis
 10. `10-over-capacity` — one tech, a day's worth of jobs plus more → `over-capacity`.
 11. `11-pinned-job` — job pinned to the farther tech.
 12. `12-pinned-position` — pin with `position: 1`.
-13. `13-late-but-ok` — lateness within the cap; plan shows late minutes.
+13. `13-would-be-late` — two jobs, one 09:00–09:15 window, one tech: the second is unassigned, not late (D-36).
 14. `14-all-reasons` — one of each reason code in one problem.
 15. `15-replan-start` — tech `start` override (mid-day position).
-16. `16-pin-wrong-skill` — job pinned to a tech without the skill → `no-skill`.
+16. `16-pin-never-dropped` — a pinned maintenance job keeps the tech's one slot; the emergency is unassigned (D-37).
+    (Pins that can't be honoured are pin-conflicts, not plans: `tests/truckroll/pins.test.ts`, `solver/tests/test_pins.py`.)
 
 `expect` holds `unassigned` (job id → reason codes, exact) and/or `unassignedCounts` (reason → count) where the solver
 may choose which job to drop, plus `assigned` ids that must be on a route.
