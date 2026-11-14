@@ -48,6 +48,12 @@ jobs:
       - run: npm run typecheck
       - run: createdb truckroll_test
       - run: npx prisma migrate deploy
+      # Truckroll D-24: the clone's hand-written migrations must produce exactly prisma/schema (exit 2 = they differ).
+      - name: Migrations match the schema
+        if: matrix.rls == 'off'
+        run: |
+          createdb truckroll_shadow
+          SHADOW_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/truckroll_shadow npx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema --exit-code
       - name: RLS enforce leg — app role, system URL
         if: matrix.rls == 'enforce'
         run: |
@@ -59,8 +65,22 @@ jobs:
           echo "DATABASE_URL=postgresql://app_rw:app_rw@localhost:5432/$db?connection_limit=8&pool_timeout=20" >> "$GITHUB_ENV"
       - run: npx vitest run
       # Production build, served — the way it ships. login.spec.ts drives a real page.
+      # Truckroll: e2e/dispatch.spec.ts plans a day through the real solver service (PRD §5), started here on :7801.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: solver/pyproject.toml
+      - name: Start the solver service
+        working-directory: solver
+        run: |
+          python -m venv .venv && .venv/bin/pip install -q -e .
+          nohup .venv/bin/uvicorn app:app --host 127.0.0.1 --port 7801 > "$RUNNER_TEMP/solver.log" 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:7801/health && exit 0; sleep 1; done; cat "$RUNNER_TEMP/solver.log"; exit 1
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
+        env:
+          SOLVER_URL: http://127.0.0.1:7801
 
   # Spec §4 / §13.3: both modules deleted by the manifest, and the tree must still generate, typecheck, build and pass drift.
   modules-removed:

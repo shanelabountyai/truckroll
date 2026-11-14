@@ -1,0 +1,114 @@
+// Truckroll (clone-owned, PRD §5): technicians, jobs and saved dispatch plans. Times are integer minutes after local
+// midnight (D-19), dates are calendar days. Every table is org-owned: RLS policies in the rls_policies_truckroll
+// migration (INV-30), all four in the export (export-hooks.ts, INV-34).
+
+enum JobPriority {
+  emergency
+  standard
+  maintenance
+}
+
+/// unscheduled/scheduled are set by a saved plan; the rest are the technician's statuses (Phase 3).
+enum JobStatus {
+  unscheduled
+  scheduled
+  en_route
+  on_site
+  done
+  cant_complete
+}
+
+model Technician {
+  id            String     @id @default(uuid()) @db.Uuid
+  orgId         String     @db.Uuid
+  org           Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  /// The member who is this technician (their own day only, TR-05). Null: a tech without a login.
+  userId        String?    @db.Uuid
+  user          User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name          String
+  skills        String[] // contract.ts SKILLS; validated on write
+  shiftStart    Int
+  shiftEnd      Int
+  homeLat       Float
+  homeLng       Float
+  lunchEarliest Int
+  lunchLatest   Int
+  maxJobs       Int
+  createdAt     DateTime   @default(now()) @db.Timestamptz(6)
+  pinnedJobs    Job[]
+  stops         PlanStop[]
+
+  @@unique([orgId, userId])
+  @@index([orgId])
+}
+
+model Job {
+  id          String      @id @default(uuid()) @db.Uuid
+  orgId       String      @db.Uuid
+  org         Org         @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  ref         String // the shop's job number, unique per org and day
+  customer    String
+  address     String
+  lat         Float
+  lng         Float
+  date        DateTime    @db.Date
+  windowStart Int
+  windowEnd   Int
+  durationMin Int
+  skill       String // contract.ts SKILLS; validated on write
+  priority    JobPriority
+  status      JobStatus   @default(unscheduled)
+  /// A dispatcher pin: a re-plan never moves it (PRD §3). Position is 1-based, optional.
+  pinTechId   String?     @db.Uuid
+  pinTech     Technician? @relation(fields: [pinTechId], references: [id], onDelete: SetNull)
+  pinPosition Int?
+  createdAt   DateTime    @default(now()) @db.Timestamptz(6)
+  stops       PlanStop[]
+
+  @@unique([orgId, date, ref])
+  @@index([orgId, date])
+}
+
+/// One solve that passed the checker (TR-02). Append-only history; the newest for a date is the current plan.
+model DispatchPlan {
+  id              String     @id @default(uuid()) @db.Uuid
+  orgId           String     @db.Uuid
+  org             Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  date            DateTime   @db.Date
+  createdById     String?    @db.Uuid // no FK: the plan outlives the user, like AuditEvent
+  problem         Json
+  plan            Json
+  metrics         Json
+  driveMin        Int
+  lateMin         Int
+  unassignedCount Int
+  stoppedBy       String
+  createdAt       DateTime   @default(now()) @db.Timestamptz(6)
+  stops           PlanStop[]
+
+  @@index([orgId, date, createdAt])
+}
+
+/// A plan's stops as rows, so a technician's day is one scoped query (TR-05).
+model PlanStop {
+  id       String       @id @default(uuid()) @db.Uuid
+  orgId    String       @db.Uuid
+  org      Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId   String       @db.Uuid
+  plan     DispatchPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  techId   String       @db.Uuid
+  tech     Technician   @relation(fields: [techId], references: [id], onDelete: Cascade)
+  jobId    String       @db.Uuid
+  job      Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  seq      Int
+  arrival  Int
+  start    Int
+  end      Int
+  driveMin Int
+  slackMin Int
+  lateMin  Int
+
+  @@unique([planId, jobId])
+  @@index([orgId])
+  @@index([techId, planId])
+}

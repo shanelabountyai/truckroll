@@ -7,6 +7,11 @@ import type { ExportTable } from '@/core/tenancy/export';
 //   { name: 'Booking', rows: (tx, orgId) => tx.booking.findMany({ where: { orgId }, select: { id: true, startsAt: true } }) },
 export const exportTables: readonly ExportTable[] = [
   ...moduleExportTables,
+  // Truckroll (Phase 2): the org's own dispatch data, whole rows (no secrets in these tables).
+  { name: 'Technician', rows: (tx, orgId) => tx.technician.findMany({ where: { orgId }, orderBy: { id: 'asc' } }) },
+  { name: 'Job', rows: (tx, orgId) => tx.job.findMany({ where: { orgId }, orderBy: { id: 'asc' } }) },
+  { name: 'DispatchPlan', rows: (tx, orgId) => tx.dispatchPlan.findMany({ where: { orgId }, orderBy: { id: 'asc' } }) },
+  { name: 'PlanStop', rows: (tx, orgId) => tx.planStop.findMany({ where: { orgId }, orderBy: { id: 'asc' } }) },
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in

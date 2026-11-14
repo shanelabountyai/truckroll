@@ -16,7 +16,7 @@ Times stay integer minutes after local midnight (D-19); dates are `@db.Date`.
 | `DispatchPlan` | `date`, `createdById`, `problem Json`, `plan Json`, `metrics Json`, `driveMin`, `lateMin`, `unassignedCount`, `stoppedBy` — append-only history; the newest for a date is current |
 | `PlanStop` | `planId`, `techId`, `jobId`, `seq`, `arrival`, `start`, `end`, `driveMin`, `slackMin`, `lateMin` — the plan's stops as rows, so a tech's day is a scoped query (TR-05) |
 
-Migration hand-written in Prisma's shape (the sandbox can't run the schema engine, D-12), plus `npm run rls:policies`
+`20261114000000_drop_billing` drops the removed billing module's tables (D-14 revised). Migration hand-written in Prisma's shape (the sandbox can't run the schema engine, D-12), plus `npm run rls:policies`
 for the four tables. CI gets a new step, `prisma migrate diff --from-migrations … --to-schema … --exit-code`, so a
 mismatch between the hand-written SQL and the schema fails CI (D-24). Export: all four tables (INV-34).
 
