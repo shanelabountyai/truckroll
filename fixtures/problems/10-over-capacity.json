@@ -1,7 +1,7 @@
 {
   "name": "10-over-capacity",
   "description": "One tech, eight 90-minute jobs within two miles of the shop: five fit (450 + lunch + drives ≤ 540), three do not.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

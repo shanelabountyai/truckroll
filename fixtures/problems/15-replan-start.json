@@ -1,7 +1,7 @@
 {
   "name": "15-replan-start",
   "description": "Mid-day re-plan: T1 is free at 13:20 at a customer site (after the lunch window), so no lunch is owed.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

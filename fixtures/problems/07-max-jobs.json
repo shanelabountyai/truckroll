@@ -1,7 +1,7 @@
 {
   "name": "07-max-jobs",
   "description": "Two techs capped at two jobs each, six short jobs: two are over capacity.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

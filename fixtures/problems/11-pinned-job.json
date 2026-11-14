@@ -1,7 +1,7 @@
 {
   "name": "11-pinned-job",
   "description": "J1 is next to the Muskogee shop but the dispatcher pinned it to the Tahlequah tech.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

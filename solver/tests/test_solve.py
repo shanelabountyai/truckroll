@@ -4,7 +4,9 @@ from fastapi.testclient import TestClient
 
 from app import app
 from contract import Plan, SolveRequest
-from solve import plan_json, precheck, solve
+import pytest
+
+from solve import TimeLimitExceeded, plan_json, precheck, solve
 
 
 def _req(fx: dict) -> SolveRequest:
@@ -15,7 +17,6 @@ def test_every_job_exactly_once_and_reasons_match(fixture):
     plan = Plan.model_validate(solve(_req(fixture)))
     ids = [s.jobId for r in plan.routes for s in r.stops] + [u.jobId for u in plan.unassigned]
     assert sorted(ids) == sorted(j["id"] for j in fixture["problem"]["jobs"])
-    assert plan.stoppedBy != "time-limit"
     exp = fixture["expect"]
     got = {u.jobId: list(u.reasons) for u in plan.unassigned}
     for job_id, reasons in exp.get("unassigned", {}).items():
@@ -63,3 +64,22 @@ def test_precheck_reasons_are_independent_of_the_solver():
 
     fx = load(next(p for p in FIXTURES if p.stem == "14-all-reasons"))
     assert precheck(_req(fx).problem) == {"NS": ["no-skill"], "NW": ["no-window-fit"]}
+
+
+def test_a_clock_cut_search_returns_no_plan_tr04(monkeypatch):
+    """D-18 / PR #1 review must-fix 1: a search the clock cut short would depend on machine speed, so there is no plan.
+    The clock is faked (each reading 10 s after the last) so the test does not itself depend on machine speed."""
+    import itertools
+
+    import solve as solve_module
+    from conftest import FIXTURES, load
+
+    ticks = itertools.count(0, 10.0)
+    monkeypatch.setattr(solve_module.time, "monotonic", lambda: next(ticks))
+    fx = load(next(p for p in FIXTURES if p.stem == "01-single-job"))
+    req = SolveRequest.model_validate({"problem": fx["problem"], "timeLimitMs": 2000})
+    with pytest.raises(TimeLimitExceeded):
+        solve(req)
+    res = TestClient(app).post("/solve", json={"problem": fx["problem"], "timeLimitMs": 2000})
+    assert res.status_code == 503
+    assert res.json()["error"] == "time-limit"

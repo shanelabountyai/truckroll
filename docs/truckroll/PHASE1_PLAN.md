@@ -33,8 +33,8 @@ All times are **integer minutes after local midnight** on the plan date; all dis
   do the job alone inside its shift, window cap and lunch), `over-capacity` (individually feasible, but dropped by the
   solver for time or `maxJobs`). The first two come from a pre-check; the solver never sees those jobs.
 - **Determinism** (TR-04): one search worker, `PARALLEL_CHEAPEST_INSERTION` then `GREEDY_DESCENT` to a local optimum,
-  bounded by a solution limit (never the clock); `timeLimitMs` is a hard cap, and the plan says
-  `"stoppedBy": "time-limit"` if it ever bites (determinism is only promised when it doesn't). *(Revised: the draft
+  bounded by a solution limit (never the clock); `timeLimitMs` is a hard cap, and a search that hits it returns
+  no plan at all (503 / exit 3), so every plan returned is reproducible (D-18, revised after review). *(Revised: the draft
   said guided local search, but GLS has no natural end and ran to the clock on small fixtures — see D-18.)* After the search, timings are normalised by a deterministic
   earliest-start forward pass (never later than the solver's, so feasibility is kept). JSON is emitted with sorted keys
   and no whitespace (D-18).

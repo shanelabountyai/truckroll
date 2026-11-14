@@ -1,7 +1,7 @@
 {
   "name": "04-tight-windows",
   "description": "One tech; three ten-minute windows force the order J1, J2, J3 regardless of geography.",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

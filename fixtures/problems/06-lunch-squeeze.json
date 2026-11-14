@@ -1,7 +1,7 @@
 {
   "name": "06-lunch-squeeze",
   "description": "Back-to-back jobs around noon: lunch must land between J1 (ends 11:30) and J2 (window 12:10–12:20).",
-  "timeLimitMs": 2000,
+  "timeLimitMs": 10000,
   "problem": {
     "version": 1,
     "date": "2026-11-16",

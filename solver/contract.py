@@ -164,4 +164,4 @@ class Plan(_Strict):
     routes: list[Route]
     unassigned: list[Unassigned]
     objective: Objective
-    stoppedBy: Literal["solution-limit", "local-optimum", "time-limit", "trivial"]
+    stoppedBy: Literal["solution-limit", "local-optimum", "trivial"]
