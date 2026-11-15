@@ -2,7 +2,8 @@ import { execSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
 import pg from 'pg';
 
-// Truckroll Phase 2 gate (PRD §7): a dispatcher plans the demo day; a technician then sees only their own day (TR-05).
+// Truckroll Phase 2–4 gates (PRD §7): a dispatcher plans the demo day; a technician sees only their own day (TR-05);
+// the 10:40 emergency (TR-03); ETA texts sent only after approval (TR-06); the metrics page.
 // Needs the solver service: CI starts it (`uvicorn app:app --port 7801` in solver/); locally run the same first.
 const DAY = '2026-11-16';
 const SOLVER = (process.env.SOLVER_URL || 'http://127.0.0.1:7801').replace(/\/+$/, '');
@@ -190,4 +191,84 @@ test('the technician’s phone shows the re-planned day', async ({ page }) => {
   const mine = page.getByRole('list', { name: 'Stops for Muskogee One' });
   await expect(mine.getByRole('listitem')).toHaveCount([...after.values()].filter((s) => s.tech === 'Muskogee One').length);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+// ---------- Truckroll Phase 4 (PRD §7): ETA texts with dispatcher approval (TR-06), metrics page ----------
+
+test('the dispatcher drafts, edits and approves ETA texts; only approved texts are sent (TR-06)', async ({ page }) => {
+  await demoSignIn(page, 'admin@acme.demo.test');
+  const before = (await db.query(`SELECT count(*)::int AS n FROM "CapturedMessage" WHERE subject = 'sms'`)).rows[0].n as number;
+  await page.goto(`/o/acme/dispatch?date=${DAY}`);
+  const panel = page.getByRole('region', { name: 'ETA texts' });
+  await expect(panel).toContainText('No AI key is set'); // CI has no key: the template path, no model call
+  await panel.getByRole('button', { name: 'Draft ETA texts' }).click();
+  await expect(panel.getByRole('status')).toContainText('ready for review. Nothing has been sent.', { timeout: 30_000 });
+  const drafts = panel.getByRole('list', { name: 'ETA drafts' }).getByRole('listitem');
+  const n = await drafts.count();
+  expect(n).toBeGreaterThan(0);
+  // Drafting sent nothing.
+  expect((await db.query(`SELECT count(*)::int AS n FROM "CapturedMessage" WHERE subject = 'sms'`)).rows[0].n).toBe(before);
+
+  // The emergency added from the board has no phone: its draft can't be sent.
+  const emergency = panel.getByRole('listitem', { name: 'ETA draft E1040' });
+  await expect(emergency).toContainText('no phone number');
+  await expect(emergency.getByRole('button', { name: 'Approve and send E1040' })).toHaveCount(0);
+
+  // Edit one draft, then approve and send just that one.
+  const first = drafts.filter({ hasNot: page.getByText('no phone number') }).first();
+  const ref = ((await first.getAttribute('aria-label')) ?? '').replace('ETA draft ', '');
+  await first.locator('summary', { hasText: 'Edit' }).click();
+  await first.getByLabel(`Edit ETA text for ${ref}`).fill(`Hi from Acme! Your technician is on the way for job ${ref}.`);
+  await first.getByRole('button', { name: `Save ETA text for ${ref}` }).click();
+  await expect(panel.getByLabel(`ETA text for ${ref}`)).toContainText(`Your technician is on the way for job ${ref}.`);
+  await panel.getByRole('button', { name: `Approve and send ${ref}` }).click();
+  await expect(panel.getByRole('status')).toContainText('1 ETA text approved and sent');
+  await expect(panel.getByRole('listitem', { name: `Sent ETA ${ref}` })).toContainText('approved by admin@acme.demo.test');
+
+  // Then the rest that have a phone.
+  await panel.getByRole('button', { name: /^Approve and send all \d+$/ }).click();
+  await expect(panel.getByRole('status')).toContainText(`${n - 2} ETA texts approved and sent`);
+  await expect(panel.getByRole('listitem', { name: 'ETA draft E1040' })).toBeVisible(); // still a draft
+
+  // TR-06 in the database: every sent text has its dispatcher approval for exactly that body, before it was sent.
+  const { rows } = await db.query(
+    `SELECT e.id, e.body, e."capturedMessageId", m.body AS sent_body,
+            (SELECT count(*)::int FROM "AuditEvent" a WHERE a.action = 'dispatch.eta_approved' AND a."targetId" = e.id::text
+               AND a."data"->>'bodySha256' = encode(sha256(convert_to(e.body, 'UTF8')), 'hex')) AS approvals
+       FROM "EtaText" e JOIN "Org" o ON o.id = e."orgId" LEFT JOIN "CapturedMessage" m ON m.id = e."capturedMessageId"
+      WHERE o.slug = 'acme' AND e.status = 'sent'`,
+  );
+  expect(rows).toHaveLength(n - 1);
+  for (const r of rows) expect([r.approvals > 0, r.sent_body === r.body]).toEqual([true, true]);
+  expect((await db.query(`SELECT count(*)::int AS n FROM "CapturedMessage" WHERE subject = 'sms'`)).rows[0].n).toBe(before + n - 1);
+});
+
+test('the metrics page shows the day’s plans and plan vs actual', async ({ page }) => {
+  await demoSignIn(page, 'admin@acme.demo.test');
+  await page.goto(`/o/acme/dispatch?date=${DAY}`);
+  await page.getByRole('link', { name: `Metrics for ${DAY}` }).click();
+  await expect(page.getByRole('heading', { name: `Metrics · ${DAY}` })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Current plan' })).toContainText('re-plan as of 10:40');
+  await expect(page.getByLabel('ETA texts')).toContainText('sent');
+  const history = page.getByRole('table', { name: 'Plan history' }).locator('tbody tr');
+  await expect(history).toHaveCount(2); // Plan the day, then the 10:40 re-plan
+  await expect(page.getByLabel('Started')).toContainText('of');
+  await expect(page.getByRole('table', { name: 'Stops, plan vs actual' }).locator('tbody tr').first()).toBeVisible();
+
+  // The seeded finished day (yesterday in America/Chicago, unless that is the fixed day): plan vs actual for every stop.
+  const yesterday = new Date(Date.parse(`${new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date())}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+  if (yesterday !== DAY) {
+    await page.goto(`/o/acme/dispatch/metrics?date=${yesterday}`);
+    await expect(page.getByLabel('Done')).toContainText('23');
+    await expect(page.getByLabel('Arrived in window')).toContainText('%');
+    await expect(page.getByRole('table', { name: 'Stops, plan vs actual' }).locator('tbody tr')).toHaveCount(24);
+  }
+});
+
+test('a technician can’t open the metrics page or approve texts', async ({ page }) => {
+  await demoSignIn(page, 'member@acme.demo.test');
+  await page.goto(`/o/acme/dispatch/metrics?date=${DAY}`);
+  await expect(page).toHaveURL(new RegExp(`/o/acme/dispatch/my-day\\?date=${DAY}$`));
+  await page.goto(`/o/acme/dispatch?date=${DAY}`);
+  await expect(page).toHaveURL(new RegExp(`/o/acme/dispatch/my-day\\?date=${DAY}$`));
 });
