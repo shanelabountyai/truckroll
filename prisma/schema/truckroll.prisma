@@ -1,6 +1,6 @@
 // Truckroll (clone-owned, PRD §5): technicians, jobs and saved dispatch plans. Times are integer minutes after local
 // midnight (D-19), dates are calendar days. Every table is org-owned: RLS policies in the rls_policies_truckroll
-// migration (INV-30), all four in the export (export-hooks.ts, INV-34).
+// migrations (INV-30), all five in the export (export-hooks.ts, INV-34).
 
 enum JobPriority {
   emergency
@@ -68,8 +68,11 @@ model Job {
   doneAt      DateTime?   @db.Timestamptz(6)
   /// Phase 3: the technician's note when the job can't be completed.
   statusNote  String?
+  /// Phase 4: where the customer's ETA text goes (synthetic numbers only in v1, D-55). Null: a draft can't be sent.
+  customerPhone String?
   createdAt   DateTime    @default(now()) @db.Timestamptz(6)
   stops       PlanStop[]
+  etaTexts    EtaText[]
 
   @@unique([orgId, date, ref])
   @@index([orgId, date])
@@ -97,6 +100,7 @@ model DispatchPlan {
   solved          Json?
   createdAt       DateTime   @default(now()) @db.Timestamptz(6)
   stops           PlanStop[]
+  etaTexts        EtaText[]
 
   @@index([orgId, date, createdAt])
 }
@@ -123,4 +127,44 @@ model PlanStop {
   @@unique([planId, jobId])
   @@index([orgId])
   @@index([techId, planId])
+}
+
+enum EtaStatus {
+  draft
+  sent
+  discarded
+}
+
+/// Phase 4 (PRD §3 "ETA texts", TR-06): one customer ETA text per job of one saved plan. Drafted by Claude through
+/// withBudget or from the template, edited and approved by a dispatcher, then "sent" into CapturedMessage (no real SMS,
+/// D-05/D-49). A trigger in the truckroll_phase4 migration refuses a `sent` row without a matching
+/// `dispatch.eta_approved` audit event, and any change to a sent row.
+model EtaText {
+  id                String       @id @default(uuid()) @db.Uuid
+  orgId             String       @db.Uuid
+  org               Org          @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  planId            String       @db.Uuid
+  plan              DispatchPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  jobId             String       @db.Uuid
+  job               Job          @relation(fields: [jobId], references: [id], onDelete: NoAction)
+  /// The customer's phone when drafted (Job.customerPhone). Null: the draft can't be sent.
+  phone             String?
+  body              String
+  /// "llm" (Claude's text passed the validator) or "template".
+  source            String
+  /// Why the template was used although a model was configured (budget, validator, error). Null otherwise.
+  fallbackReason    String?
+  status            EtaStatus    @default(draft)
+  createdById       String?      @db.Uuid // no FK, like DispatchPlan.createdById
+  createdAt         DateTime     @default(now()) @db.Timestamptz(6)
+  editedAt          DateTime?    @db.Timestamptz(6)
+  approvedById      String?      @db.Uuid
+  approvedAt        DateTime?    @db.Timestamptz(6)
+  sentAt            DateTime?    @db.Timestamptz(6)
+  /// The CapturedMessage row the text was "sent" into (template table, so no FK).
+  capturedMessageId String?      @db.Uuid
+
+  @@unique([planId, jobId])
+  @@index([orgId, planId])
+  @@index([jobId])
 }

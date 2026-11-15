@@ -9,6 +9,7 @@ import { FROZEN, type JobStatus } from '@/lib/dispatch/replan';
 import { isDispatcher } from '@/lib/dispatch/roles';
 import { dayOf, hhmm, isRealDay, nowMinuteIn, todayIn } from '@/lib/dispatch/time';
 import { addJob, addTech, insertEmergency, pinJob, planDay, replanDay, unpinJob } from './actions';
+import { EtaPanel, type EtaRow } from './eta-panel';
 import { TechTimeline, type StopJob } from './timeline';
 
 export const metadata = { title: 'Dispatch' };
@@ -31,7 +32,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
   const date = isRealDay(asked) ? asked : todayIn();
   if (!isDispatcher(ctx.role)) redirect(`/o/${ctx.slug}/dispatch/my-day?date=${date}`);
 
-  const { techs, jobs, saved, members, stopIds } = await withOrg(ctx, async (tx) => {
+  const { techs, jobs, saved, members, stopIds, etas } = await withOrg(ctx, async (tx) => {
     const [techs, jobs, saved, members] = await Promise.all([
       tx.technician.findMany({ where: inOrg(ctx), orderBy: [{ name: 'asc' }, { id: 'asc' }], include: { user: { select: { email: true } } } }),
       tx.job.findMany({ where: { ...inOrg(ctx), date: dayOf(date) }, orderBy: [{ ref: 'asc' }, { id: 'asc' }] }),
@@ -39,7 +40,10 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
       tx.membership.findMany({ where: { ...inOrg(ctx), role: 'member' }, include: { user: { select: { id: true, email: true } } }, orderBy: { createdAt: 'asc' } }),
     ]);
     const stops = saved ? await tx.planStop.findMany({ where: { ...inOrg(ctx), planId: saved.id }, select: { id: true, jobId: true } }) : [];
-    return { techs, jobs, saved, members, stopIds: new Map(stops.map((x) => [x.jobId, x.id])) };
+    const texts = saved ? await tx.etaText.findMany({ where: { ...inOrg(ctx), planId: saved.id, status: { in: ['draft', 'sent'] } }, include: { job: { select: { ref: true, customer: true } } }, orderBy: [{ job: { ref: 'asc' } }] }) : [];
+    const approvers = new Map((await tx.user.findMany({ where: { id: { in: texts.map((t) => t.approvedById).filter((x): x is string => !!x) } }, select: { id: true, email: true } })).map((u) => [u.id, u.email]));
+    const etas: EtaRow[] = texts.map((t) => ({ id: t.id, jobRef: t.job.ref, customer: t.job.customer, phone: t.phone, body: t.body, source: t.source, fallbackReason: t.fallbackReason, status: t.status, editedAt: t.editedAt, sentAt: t.sentAt, approvedBy: t.approvedById ? approvers.get(t.approvedById) ?? null : null }));
+    return { techs, jobs, saved, members, stopIds: new Map(stops.map((x) => [x.jobId, x.id])), etas };
   }, { atomic: false });
 
   const plan = (saved?.plan ?? null) as Plan | null;
@@ -56,11 +60,16 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
   const isToday = date === todayIn();
   const asOfDefault = isToday ? hhmm(nowMinuteIn()) : '';
   const unplacedEmergencies = (plan?.unassigned ?? []).filter((u) => jobInfo.get(u.jobId)?.priority === 'emergency');
+  const num = (k: string) => (typeof q[k] === 'string' && /^\d{1,4}$/.test(q[k] as string) ? Number(q[k]) : null);
+  const etaFlash = num('sent') !== null ? `${num('sent')} ETA text${num('sent') === 1 ? '' : 's'} approved and sent (captured, not texted).` : num('drafted') !== null ? `${num('drafted')} ETA draft${num('drafted') === 1 ? '' : 's'} ready for review. Nothing has been sent.` : null;
   const replannedAt = typeof q.replanned === 'string' && /^\d{4}$/.test(q.replanned) ? `${q.replanned.slice(0, 2)}:${q.replanned.slice(2)}` : null;
 
   return (
     <main style={{ maxWidth: 1200 }}>
       <h1>Dispatch · {date}</h1>
+      <nav aria-label="Dispatch pages" style={{ marginBottom: 8 }}>
+        <a href={`/o/${ctx.slug}/dispatch/metrics?date=${date}`}>Metrics for {date}</a>
+      </nav>
       <form method="get" style={{ marginBottom: '1rem' }}>
         <label>Day <input type="date" name="date" defaultValue={date} /></label> <button type="submit">Show</button>
       </form>
@@ -111,7 +120,8 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
               <p>
                 <label>Job number <input name="ref" required maxLength={32} aria-label="Emergency job number" /></label>{' '}
                 <label>Customer <input name="customer" required maxLength={120} aria-label="Emergency customer" /></label>{' '}
-                <label>Address <input name="address" required maxLength={200} aria-label="Emergency address" /></label>
+                <label>Address <input name="address" required maxLength={200} aria-label="Emergency address" /></label>{' '}
+                <label>Phone <input name="customerPhone" type="tel" maxLength={32} aria-label="Emergency phone" /></label>
               </p>
               <p>
                 <label>Latitude <input name="lat" required inputMode="decimal" aria-label="Emergency latitude" /></label>{' '}
@@ -124,6 +134,8 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
           </details>
         </section>
       )}
+
+      {plan && <EtaPanel slug={ctx.slug} date={date} rows={etas} aiConfigured={!!process.env.ANTHROPIC_API_KEY?.trim()} flash={etaFlash} />}
 
       <h2>Plan</h2>
       {!plan && <p>No plan saved for this day yet.</p>}
@@ -175,7 +187,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
             return (
               <tr key={j.id} aria-label={`Job ${j.ref}`}>
                 <td style={cell}>{j.ref}</td>
-                <td style={cell}>{j.customer}<br /><small>{j.address}</small></td>
+                <td style={cell}>{j.customer}<br /><small>{j.address}{j.customerPhone ? ` · ${j.customerPhone}` : ''}</small></td>
                 <td style={cell}>{hhmm(j.windowStart)}–{hhmm(j.windowEnd)}</td>
                 <td style={cell}>{j.durationMin} min</td>
                 <td style={cell}>{j.skill}</td>
@@ -234,7 +246,8 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
           <p>
             <label>Job number <input name="ref" required maxLength={32} /></label>{' '}
             <label>Customer <input name="customer" required maxLength={120} /></label>{' '}
-            <label>Address <input name="address" required maxLength={200} /></label>
+            <label>Address <input name="address" required maxLength={200} /></label>{' '}
+            <label>Phone <input name="customerPhone" type="tel" maxLength={32} /></label>
           </p>
           <p>
             <label>Latitude <input name="lat" required inputMode="decimal" /></label>{' '}

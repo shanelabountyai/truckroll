@@ -1,7 +1,7 @@
 import { REASONS, type Plan, type Problem, type Reason } from './contract';
 
 // PRD §3 Metrics, per plan. Pure: (problem, plan) → numbers. Percentages are whole numbers (rounded half up).
-// Plan-vs-actual arrives with statuses in Phase 3.
+// Plan-vs-actual (Phase 4) is planVsActual below.
 export interface PlanMetrics {
   assigned: number;
   unassigned: number;
@@ -52,5 +52,87 @@ export function computeMetrics(problem: Problem, plan: Plan): PlanMetrics {
     serviceMin,
     utilizationPct: available ? Math.round((100 * (serviceMin + routeDrive)) / available) : 0,
     techsUsed,
+  };
+}
+
+// ---------- Phase 4: plan vs actual (PRD §3 "plan vs actual once statuses come in", D-57) ----------
+
+/** One job's recorded statuses, as local minutes on the plan's day (null when not recorded on that day). */
+export interface ActualJob {
+  status: string;
+  windowStart: number;
+  windowEnd: number;
+  durationMin: number;
+  onSiteMin: number | null;
+  doneMin: number | null;
+}
+
+export interface ActualRow {
+  jobId: string;
+  techId: string;
+  seq: number;
+  status: string;
+  plannedStart: number;
+  plannedEnd: number;
+  actualStart: number | null; // on site
+  actualEnd: number | null; // done / can't complete
+  startDeltaMin: number | null; // actual − planned start (+ = later than planned)
+  durationDeltaMin: number | null; // (actual end − actual start) − planned duration
+  inWindow: boolean | null; // on site no later than the window's end (the promise made to the customer)
+}
+
+export interface PlanVsActual {
+  stops: number;
+  started: number; // en route, on site, done or can't complete
+  done: number;
+  cantComplete: number;
+  arrived: number; // stops with a recorded on-site time
+  /** Of the stops with a recorded on-site time: arrived by the window's end. Null until one arrives. */
+  actualOnTimePct: number | null;
+  /** Mean of startDeltaMin over arrived stops, rounded; null until one arrives. */
+  avgStartDeltaMin: number | null;
+  /** Mean of durationDeltaMin over stops with both times; null until one finishes. */
+  avgDurationDeltaMin: number | null;
+  rows: ActualRow[];
+}
+
+const STARTED = new Set(['en_route', 'on_site', 'done', 'cant_complete']);
+const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null);
+
+/** Every routed stop of `plan` beside what its technician recorded. Pure; jobs missing from `jobs` are skipped. */
+export function planVsActual(plan: Plan, jobs: Map<string, ActualJob>): PlanVsActual {
+  const rows: ActualRow[] = [];
+  for (const r of plan.routes) {
+    for (const s of r.stops) {
+      const j = jobs.get(s.jobId);
+      if (!j) continue;
+      const actualStart = j.onSiteMin;
+      const actualEnd = j.doneMin !== null && (j.status === 'done' || j.status === 'cant_complete') ? j.doneMin : null;
+      rows.push({
+        jobId: s.jobId,
+        techId: r.techId,
+        seq: s.seq,
+        status: j.status,
+        plannedStart: s.start,
+        plannedEnd: s.end,
+        actualStart,
+        actualEnd,
+        startDeltaMin: actualStart === null ? null : actualStart - s.start,
+        durationDeltaMin: actualStart !== null && actualEnd !== null && j.status === 'done' ? actualEnd - actualStart - j.durationMin : null,
+        inWindow: actualStart === null ? null : actualStart <= j.windowEnd,
+      });
+    }
+  }
+  const arrived = rows.filter((x) => x.actualStart !== null);
+  return {
+    stops: rows.length,
+    started: rows.filter((x) => STARTED.has(x.status)).length,
+    done: rows.filter((x) => x.status === 'done').length,
+    cantComplete: rows.filter((x) => x.status === 'cant_complete').length,
+    arrived: arrived.length,
+    actualOnTimePct: arrived.length ? Math.round((100 * arrived.filter((x) => x.inWindow).length) / arrived.length) : null,
+    avgStartDeltaMin: mean(arrived.map((x) => x.startDeltaMin!)),
+    avgDurationDeltaMin: mean(rows.filter((x) => x.durationDeltaMin !== null).map((x) => x.durationDeltaMin!)),
+    rows,
   };
 }

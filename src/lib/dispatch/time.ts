@@ -52,3 +52,22 @@ export function localMinuteOn(at: Date | null | undefined, day: string, timeZone
 export function nowMinuteIn(timeZone = 'America/Chicago', at = new Date()): number {
   return localMinuteOn(at, todayIn(timeZone, at), timeZone)!;
 }
+
+/** The instant that is `minute` minutes after midnight of calendar day `day` in `timeZone` (inverse of localMinuteOn). */
+export function instantAt(day: string, minute: number, timeZone = 'America/Chicago'): Date {
+  const wallMs = (at: number) => {
+    const p = Object.fromEntries(
+      new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date(at))
+        .map((x) => [x.type, x.value]),
+    );
+    return Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), Number(p.hour), Number(p.minute), Number(p.second));
+  };
+  const target = dayOf(day).getTime() + minute * 60_000; // the wall clock we want, read as if it were UTC
+  let t = target;
+  for (let i = 0; i < 3; i++) t += target - wallMs(t); // converges in one step except across a DST change
+  return new Date(t);
+}
+
+/** "2026-11-16" plus `n` calendar days. */
+export const addDays = (day: string, n: number) => isoDay(new Date(dayOf(day).getTime() + n * 86_400_000));

@@ -2,6 +2,68 @@
 
 > Cloned from saas-foundation v1.6.2. Port 7800. Upgrade with `npm run foundation:status`; template-owned paths are listed in the template's plan §3.2.
 
+## Truckroll — HVAC dispatch (build log #24)
+
+Truckroll plans an HVAC shop's day with a constraint solver: who has the skill, who is closest, whose shift fits the
+customer's window. The dispatcher can pin jobs, re-plan mid-day when an emergency lands, and send customers ETA texts
+after approving them. Product spec: `docs/truckroll/PRD.md`; decisions: `docs/truckroll/DECISIONS.md`; phase plans:
+`docs/truckroll/PHASE1_PLAN.md` … `PHASE4_PLAN.md`. All data is synthetic (Muskogee and Tahlequah, Oklahoma; made-up
+customers, "Synthetic OK" addresses, fictional 918-555-01xx numbers). No real SMS is ever sent: an approved text lands
+in the captured-message store.
+
+How it fits together: `solver/` is a Python service (FastAPI + Google OR-Tools, `POST /solve` on port 7801). The app
+never trusts it: every plan passes the TypeScript checker `src/lib/dispatch/check.ts` before it is saved. Invariants
+TR-01 to TR-06 are in `tests/truckroll/`.
+
+### Run it locally
+
+```bash
+npm ci && npm run db:setup                     # Postgres 17 running locally (Quickstart below)
+cd solver && python3 -m venv .venv && .venv/bin/pip install -e . && cd ..
+(cd solver && .venv/bin/uvicorn app:app --port 7801) &   # the planner
+npm run seed:demo && npm run seed:dispatch     # demo orgs, then the Truckroll demo days
+npm run dev                                    # http://localhost:7800
+```
+
+`seed:dispatch` seeds Acme (6 technicians, 24 jobs a day) and Globex (a smaller shop). It creates four days: the fixed
+e2e day 2026-11-16, then three days around today in Chicago time. **Yesterday** is finished: it has a saved plan, and
+every stop has recorded times. **Today** and **tomorrow** are waiting to be planned. Re-running it resets those days.
+
+ETA texts are written by Claude when `ANTHROPIC_API_KEY` is set in `.env.local`. Every model call goes through the
+foundation's AI spending limit (`withBudget`; the demo org's limit is $1.00), and Claude's text is only used if it
+passes the checks in `src/lib/dispatch/eta.ts`. Without the key, every draft uses the standard template.
+
+### Demo script (about 10 minutes)
+
+Sign in at `http://localhost:7800/demo` and pick the account named in each step. Use the board's **Day** picker to
+move between days.
+
+1. **The dispatcher's board.** Sign in as `admin@acme.demo.test` → **Acme Studio** → **Dispatch**. The board opens on
+   today: 24 jobs and 6 technicians, with skills, shifts and lunch windows.
+2. **Pin a job.** In the Jobs table, pin `J02` to **Tahlequah One**. Pinned jobs are never moved or dropped. If the
+   pins can't all be kept, the board names the pins to change and saves nothing.
+3. **Plan the day.** Press **Plan the day**. The solver answers in well under a second, and the result is shown only
+   after the checker passes it: one timeline per technician, a stops table under each, and on-time %, drive minutes
+   and utilization. Every job starts inside its window; a job that can't fit is listed as unassigned, with the reason.
+4. **The technician's phone.** In a second browser, or with your phone's screen size, sign in as
+   `member@acme.demo.test` and open **My day**. Muskogee One sees only their own stops. Press **On site**, then
+   **Done**, on the first stop.
+5. **10:40, a no-heat call.** Back on the board, open **Emergency insert**. Re-plan from `10:40`, job `E1040`, any
+   address with latitude `35.765` and longitude `-95.345`, skill `repair`, and press **Add emergency and re-plan**.
+   Started work and pins stay exactly where they were, and the emergency goes on a route. If the only room for it is
+   taken by a pin, the pin wins and the board tells you.
+6. **Customer ETA texts.** In **Customer ETA texts**, press **Draft ETA texts**. Read the drafts, edit one, and press
+   **Approve and send** on it, then **Approve and send all**. Nothing is sent until you approve it. Each approval is
+   written to the audit log (**Audit log** in the org menu, action `dispatch.eta`), and the database refuses to mark a text sent
+   without that approval (TR-06). The sent texts are in the captured-message store, not on anyone's phone.
+7. **Metrics.** Open **Metrics for …**. It shows the current plan's numbers and every plan and re-plan saved that day.
+   Change the day to **yesterday** to see plan vs actual: arrived in window, average start against plan, job length
+   against estimate, and one stop that couldn't be completed.
+8. **Two shops.** Sign in as `admin@globex.demo.test`. Globex is a separate shop and sees none of Acme's data.
+
+To run the demo on the fixed e2e day instead, open `?date=2026-11-16` (the Phase 2–4 e2e in `e2e/dispatch.spec.ts`
+runs the same steps there).
+
 A Next.js 16 + Prisma 7 + Postgres template with the parts every multi-tenant app rebuilds: magic-link sign-in with TOTP,
 orgs and roles, one authorization path, an append-only audit log, share links, cron, and optional billing (Stripe) and
 notifications (SMS). Its safety rules are executable: `tests/invariants/` holds INV-01 to INV-28, and CI fails if one breaks.

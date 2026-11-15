@@ -109,6 +109,7 @@ model Org {
   jobs           Job[] // app
   dispatchPlans  DispatchPlan[] // app
   planStops      PlanStop[] // app
+  etaTexts       EtaText[] // app
 }
 
 model Membership {
