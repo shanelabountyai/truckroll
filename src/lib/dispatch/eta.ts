@@ -132,7 +132,6 @@ export function etaTextProblem(text: string, f: EtaFacts): string | null {
   const allowed = new Set([f.fromLabel, f.toLabel]);
   for (const m of t.matchAll(TIME_RE)) if (!allowed.has(m[0].trim())) return `mentions another time (${m[0].trim()})`;
   if (!t.includes(f.tech)) return 'missing the technician’s name';
-  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(t)) return 'contains control characters';
   return null;
 }
