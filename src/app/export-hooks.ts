@@ -12,6 +12,8 @@ export const exportTables: readonly ExportTable[] = [
   { name: 'Job', rows: (tx, orgId) => tx.job.findMany({ where: { orgId }, orderBy: { id: 'asc' } }) },
   { name: 'DispatchPlan', rows: (tx, orgId) => tx.dispatchPlan.findMany({ where: { orgId }, orderBy: { id: 'asc' } }) },
   { name: 'PlanStop', rows: (tx, orgId) => tx.planStop.findMany({ where: { orgId }, orderBy: { id: 'asc' } }) },
+  // Phase 4: ETA texts (drafts and sent), whole rows: the customer's synthetic phone and the text the shop wrote.
+  { name: 'EtaText', rows: (tx, orgId) => tx.etaText.findMany({ where: { orgId }, orderBy: { id: 'asc' } }) },
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in

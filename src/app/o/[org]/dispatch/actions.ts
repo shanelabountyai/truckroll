@@ -7,6 +7,9 @@ import { inOrg, type OrgCtx } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import { LUNCH_MINUTES, PRIORITIES, SKILLS } from '@/lib/dispatch/contract';
+import { ETA_EDIT_MAX_CHARS } from '@/lib/dispatch/eta';
+import { etaModelFromEnv } from '@/lib/dispatch/eta-llm';
+import { approveAndSend, discardEtaText, draftEtaTexts, editEtaText } from '@/lib/dispatch/eta-store';
 import { DISPATCH } from '@/lib/dispatch/roles';
 import { buildProblem, currentPlan, loadReplan, lockDispatch, pinConflictMessage, replanPinMessage, savePlanIfValid, saveReplanIfValid, startedJobs } from '@/lib/dispatch/plan-store';
 import { ACTIVE, NEXT_STATUS as NEXT, STATUS_LABEL, type JobStatus } from '@/lib/dispatch/replan';
@@ -29,6 +32,8 @@ const clock = (label: string) =>
   });
 // Only where the day just sets the page to return to: '' (or a missing day) goes back to the board's default day.
 const backTo = z.union([z.literal(''), date]).optional();
+// Phase 4 (D-55): the customer's phone for ETA texts; optional ('' = none, the text can't be sent).
+const phone = z.union([z.literal(''), z.string().trim().regex(/^\+?[0-9][0-9 ().-]{6,24}$/, 'Phone: digits, spaces, dashes or brackets.')]).optional();
 const num = (label: string, min: number, max: number) => z.coerce.number({ message: `${label} must be a number.` }).min(min, `${label} is out of range.`).max(max, `${label} is out of range.`);
 
 export const addJob = orgAction(
@@ -45,14 +50,15 @@ export const addJob = orgAction(
     durationMin: num('Duration', 1, 720).int('Duration is whole minutes.'),
     skill: z.enum(SKILLS, { message: 'Pick a skill.' }),
     priority: z.enum(PRIORITIES, { message: 'Pick a priority.' }),
+    customerPhone: phone,
   }),
-  async (ctx, i) => {
+  async (ctx, { customerPhone, ...i }) => {
     if (i.windowEnd < i.windowStart) throw new Refused('The window ends before it starts.');
     await withOrg(ctx, async (tx) => {
       await lockDispatch(tx, ctx.orgId);
       const exists = await tx.job.findFirst({ where: { ...inOrg(ctx), date: dayOf(i.date), ref: i.ref }, select: { id: true } });
       if (exists) throw new Refused(`Job ${i.ref} already exists on ${i.date}.`);
-      const j = await tx.job.create({ data: { ...inOrg(ctx), ...i, date: dayOf(i.date) } });
+      const j = await tx.job.create({ data: { ...inOrg(ctx), ...i, customerPhone: customerPhone || null, date: dayOf(i.date) } });
       await audit(ctx, 'dispatch.job_created', { targetType: 'job', targetId: j.id, data: { ref: i.ref, date: i.date } }, tx);
     });
     redirect(board(ctx, i.date));
@@ -219,15 +225,16 @@ export const insertEmergency = orgAction(
     windowEnd: clock('Window end'),
     durationMin: num('Duration', 1, 720).int('Duration is whole minutes.'),
     skill: z.enum(SKILLS, { message: 'Pick a skill.' }),
+    customerPhone: phone,
   }),
-  async (ctx, { asOf, ...i }) => {
+  async (ctx, { asOf, customerPhone, ...i }) => {
     if (i.windowEnd < asOf) throw new Refused('The window ends before the re-plan time.');
     await withOrg(ctx, async (tx) => {
       await lockDispatch(tx, ctx.orgId);
       if (!(await currentPlan(tx, ctx.orgId, i.date))) throw new Refused('There is no plan for this day yet. Plan the day first, then insert the emergency.');
       const exists = await tx.job.findFirst({ where: { ...inOrg(ctx), date: dayOf(i.date), ref: i.ref }, select: { id: true } });
       if (exists) throw new Refused(`Job ${i.ref} already exists on ${i.date}.`);
-      const j = await tx.job.create({ data: { ...inOrg(ctx), ...i, date: dayOf(i.date), windowStart: asOf, priority: 'emergency' } });
+      const j = await tx.job.create({ data: { ...inOrg(ctx), ...i, customerPhone: customerPhone || null, date: dayOf(i.date), windowStart: asOf, priority: 'emergency' } });
       await audit(ctx, 'dispatch.job_created', { targetType: 'job', targetId: j.id, data: { ref: i.ref, date: i.date, emergency: true, asOf: hhmm(asOf) } }, tx);
     });
     try {
@@ -292,5 +299,57 @@ export const setJobStatus = orgAction(
     if (i.back === 'stop') redirect(`${base}/stops/${where.stopId}`);
     if (i.back === 'board') redirect(`${base}?date=${where.day}`);
     redirect(`${base}/my-day?date=${where.day}`);
+  },
+);
+
+// ---------- Phase 4: customer ETA texts (PRD §3, TR-06) ----------
+
+const etaBoard = (ctx: OrgCtx, d: string, flag?: string) => `${board(ctx, d)}${flag ? `&${flag}` : ''}#eta`;
+
+/**
+ * Draft one ETA text per job of the day's current plan: Claude through withBudget when ANTHROPIC_API_KEY is set,
+ * otherwise (or when the model's text fails the validator) the template (D-06, D-50, D-51). Nothing is sent.
+ */
+export const draftEtas = orgAction(DISPATCH, z.object({ date }), async (ctx, { date: d }) => {
+  const r = await draftEtaTexts(ctx, d, etaModelFromEnv());
+  redirect(etaBoard(ctx, d, `drafted=${r.drafted}`));
+});
+
+export const editEta = orgAction(
+  DISPATCH,
+  z.object({ id: ref('etaText'), body: z.string().trim().min(1, 'The text can’t be empty.').max(ETA_EDIT_MAX_CHARS, `Keep the text under ${ETA_EDIT_MAX_CHARS} characters.`) }),
+  async (ctx, i) => {
+    const d = await withOrg(ctx, async (tx) => {
+      await lockDispatch(tx, ctx.orgId);
+      return editEtaText(tx, ctx, i.id, i.body);
+    });
+    if (d === 'notFound') notFound();
+    redirect(etaBoard(ctx, d));
+  },
+);
+
+export const discardEta = orgAction(DISPATCH, z.object({ id: ref('etaText') }), async (ctx, i) => {
+  const d = await withOrg(ctx, async (tx) => {
+    await lockDispatch(tx, ctx.orgId);
+    return discardEtaText(tx, ctx, i.id);
+  });
+  if (d === 'notFound') notFound();
+  redirect(etaBoard(ctx, d));
+});
+
+/**
+ * Approve and send (TR-06): for each chosen draft, the dispatcher's approval goes into the audit log, then the text is
+ * "sent" into the captured-message store (no real SMS, D-05/D-49). All or nothing: one bad draft sends none.
+ */
+export const approveEtas = orgAction(
+  DISPATCH,
+  z.object({ ids: z.array(ref('etaText')).min(1, 'Tick at least one ETA text to approve.').max(200) }),
+  async (ctx, i) => {
+    const r = await withOrg(ctx, async (tx) => {
+      await lockDispatch(tx, ctx.orgId);
+      return approveAndSend(tx, ctx, i.ids);
+    });
+    if (r === 'notFound') notFound();
+    redirect(etaBoard(ctx, r.date, `sent=${r.sent}`));
   },
 );

@@ -3,7 +3,7 @@ import { dbSystem as db } from '@/core/db/system';
 // CLONE-OWNED. The INV-01..04 harness seeds these rows in both fixture orgs, so it can drive
 // actions whose inputs use ref('<model>') for the clone's own tables. Return { model: id } for
 // one row of each model, owned by `org.orgId`. INV-29 (RLS enforce) calls it too, so every org-owned clone table has rows to scope.
-// Truckroll: a technician, a job on the harness day, and a saved plan with one stop. Fixed ids: the harness re-seeds
+// Truckroll: a technician, a job on the harness day, a saved plan with one stop, and an ETA text draft for it. Fixed ids: the harness re-seeds
 // before every call, and a ref minted once must still resolve.
 const id = (key: 'a' | 'b', n: number) => `00000000-0000-4000-8000-${String((key === 'a' ? 9000 : 9500) + n).padStart(12, '0')}`;
 
@@ -21,5 +21,9 @@ export async function seedApp(org: { orgId: string; userId: string }, key: 'a' |
   const stop = await db.planStop.create({
     data: { id: id(key, 4), orgId: org.orgId, planId: plan.id, techId: technician.id, jobId: job.id, seq: 1, arrival: 482, start: 540, end: 600, driveMin: 2, slackMin: 58, lateMin: 0 },
   });
-  return { technician: technician.id, job: job.id, dispatchPlan: plan.id, planStop: stop.id };
+  // Phase 4: an ETA text draft for that stop (never sent: a sent row needs an approval event, TR-06).
+  const eta = await db.etaText.create({
+    data: { id: id(key, 5), orgId: org.orgId, planId: plan.id, jobId: job.id, phone: '918-555-0100', body: `harness ETA ${key}`, source: 'template', createdById: org.userId },
+  });
+  return { technician: technician.id, job: job.id, dispatchPlan: plan.id, planStop: stop.id, etaText: eta.id };
 }
