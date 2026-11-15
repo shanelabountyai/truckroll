@@ -121,7 +121,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
                 <label>Job number <input name="ref" required maxLength={32} aria-label="Emergency job number" /></label>{' '}
                 <label>Customer <input name="customer" required maxLength={120} aria-label="Emergency customer" /></label>{' '}
                 <label>Address <input name="address" required maxLength={200} aria-label="Emergency address" /></label>{' '}
-                <label>Phone <input name="customerPhone" type="tel" maxLength={32} aria-label="Emergency customer phone" /></label>
+                <label>Phone <input name="customerPhone" type="tel" maxLength={32} aria-label="Emergency phone" /></label>
               </p>
               <p>
                 <label>Latitude <input name="lat" required inputMode="decimal" aria-label="Emergency latitude" /></label>{' '}

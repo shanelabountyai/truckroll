@@ -220,7 +220,7 @@ test('the dispatcher drafts, edits and approves ETA texts; only approved texts a
   await first.locator('summary', { hasText: 'Edit' }).click();
   await first.getByLabel(`Edit ETA text for ${ref}`).fill(`Hi from Acme! Your technician is on the way for job ${ref}.`);
   await first.getByRole('button', { name: `Save ETA text for ${ref}` }).click();
-  await expect(panel.getByLabel(`ETA text for ${ref}`)).toContainText(`Your technician is on the way for job ${ref}.`);
+  await expect(panel.getByLabel(`ETA text for ${ref}`, { exact: true })).toContainText(`Your technician is on the way for job ${ref}.`);
   await panel.getByRole('button', { name: `Approve and send ${ref}` }).click();
   await expect(panel.getByRole('status')).toContainText('1 ETA text approved and sent');
   await expect(panel.getByRole('listitem', { name: `Sent ETA ${ref}` })).toContainText('approved by admin@acme.demo.test');
