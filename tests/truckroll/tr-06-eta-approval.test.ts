@@ -154,7 +154,7 @@ describe('TR-06: the send guard trusts only the audit log', () => {
   }
 
   it('no approval event → refused, nothing captured', async () => {
-    const { ctx, t } = await ctxAndDraft();
+    const { t } = await ctxAndDraft();
     await expect(send(t.id)).rejects.toThrow(/TR-06: .*no dispatcher approval/);
     expect(await captured()).toHaveLength(0);
     expect((await db.etaText.findUniqueOrThrow({ where: { id: t.id } })).status).toBe('draft');
@@ -180,7 +180,7 @@ describe('TR-06: the send guard trusts only the audit log', () => {
   });
 
   it('an "approval" by a technician → refused', async () => {
-    const { ctx, t } = await ctxAndDraft();
+    const { t } = await ctxAndDraft();
     await db.auditEvent.createMany({ data: [{ orgId: w.orgId, actorUserId: w.tech, action: APPROVED, targetType: 'etaText', targetId: t.id, data: { planId: t.planId, jobId: t.jobId, bodySha256: bodySha256(t.body) } }] });
     await expect(send(t.id)).rejects.toThrow(/not approved by a dispatcher/);
     expect(await captured()).toHaveLength(0);

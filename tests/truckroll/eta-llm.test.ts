@@ -111,7 +111,7 @@ describe('the model transport and the key', () => {
   });
 
   it('with a key, the Messages API request is well-formed and its reply is parsed (fake fetch, no network)', async () => {
-    const fake = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
+    const fake = vi.fn<(url: string | URL | Request, init?: RequestInit) => Promise<Response>>(async () =>
       new Response(JSON.stringify({ content: [{ type: 'text', text: 'Hello there.' }], usage: { input_tokens: 123, output_tokens: 7 } }), { status: 200 }),
     );
     const model = anthropicModel('test-key-not-real', fake as unknown as typeof fetch);
