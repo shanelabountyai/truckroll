@@ -134,3 +134,17 @@ def test_no_solution_from_the_model_still_gives_honest_reasons(monkeypatch):
     plan = solve_module.solve(_demo(60_000))
     assert plan["unassigned"] == []  # the demo day has room for everything
     assert sum(len(r["stops"]) for r in plan["routes"]) == 24
+
+
+def test_lunch_taken_owes_no_lunch_d41():
+    """Phase 3 re-plan: a tech who already took lunch gets none on the rest of the route; the same tech without the
+    flag owes lunch, so the 12:15-12:30 refrigerant job no longer fits (fixture 17)."""
+    import json
+    from pathlib import Path
+    fx = json.loads((Path(__file__).resolve().parents[2] / "fixtures/problems/17-replan-lunch-taken.json").read_text())
+    taken = solve(_req(fx))
+    t1 = next(r for r in taken["routes"] if r["techId"] == "T1")
+    assert t1["lunch"] is None and [s["jobId"] for s in t1["stops"]] == ["J1"]
+    del fx["problem"]["techs"][0]["lunchTaken"]
+    owed = solve(_req(fx))
+    assert {u["jobId"]: u["reasons"] for u in owed["unassigned"]} == {"J1": ["no-window-fit"]}

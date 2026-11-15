@@ -1,0 +1,104 @@
+{
+  "name": "17-replan-lunch-taken",
+  "description": "Mid-day re-plan (Phase 3, D-41): T1 is free at 12:10, inside its lunch window, but has already taken lunch (lunchTaken), so its route owes none. Only T1 is refrigerant-certified, and J1 (12:15–12:30, 60 min) fits only if no lunch is owed: before J1 it would miss the window, after J1 it would start after 13:00. T2 starts fresh and still owes lunch.",
+  "timeLimitMs": 10000,
+  "problem": {
+    "version": 1,
+    "date": "2026-11-16",
+    "techs": [
+      {
+        "id": "T1",
+        "name": "Tech Alpha",
+        "skills": [
+          "repair",
+          "refrigerant-certified"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 3,
+        "start": {
+          "point": {
+            "lat": 35.78,
+            "lng": -95.33
+          },
+          "at": 730
+        },
+        "lunchTaken": true
+      },
+      {
+        "id": "T2",
+        "name": "Tech Beta",
+        "skills": [
+          "repair"
+        ],
+        "shiftStart": 480,
+        "shiftEnd": 1020,
+        "home": {
+          "lat": 35.7479,
+          "lng": -95.3697
+        },
+        "lunch": {
+          "earliest": 690,
+          "latest": 780
+        },
+        "maxJobs": 8
+      }
+    ],
+    "jobs": [
+      {
+        "id": "J1",
+        "customer": "Customer 17-001",
+        "address": "6736 Sample Ln, Synthetic OK",
+        "location": {
+          "lat": 35.78063,
+          "lng": -95.33669
+        },
+        "windowStart": 735,
+        "windowEnd": 750,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "refrigerant-certified"
+      },
+      {
+        "id": "J2",
+        "customer": "Customer 17-002",
+        "address": "960 Synthetic Blvd, Synthetic OK",
+        "location": {
+          "lat": 35.73483,
+          "lng": -95.36691
+        },
+        "windowStart": 540,
+        "windowEnd": 660,
+        "durationMin": 60,
+        "priority": "standard",
+        "skill": "repair"
+      }
+    ]
+  },
+  "expect": {
+    "assigned": [
+      "J1",
+      "J2"
+    ],
+    "unassigned": {},
+    "noLunch": [
+      "T1"
+    ],
+    "sequence": {
+      "T1": [
+        "J1"
+      ],
+      "T2": [
+        "J2"
+      ]
+    }
+  }
+}

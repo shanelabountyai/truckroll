@@ -8,9 +8,11 @@ import { withOrg } from '@/core/db/rls';
 import { Refused } from '@/core/errors';
 import { LUNCH_MINUTES, PRIORITIES, SKILLS } from '@/lib/dispatch/contract';
 import { DISPATCH } from '@/lib/dispatch/roles';
-import { buildProblem, lockDispatch, pinConflictMessage, savePlanIfValid } from '@/lib/dispatch/plan-store';
+import { buildProblem, currentPlan, loadReplan, lockDispatch, pinConflictMessage, replanPinMessage, savePlanIfValid, saveReplanIfValid, startedJobs } from '@/lib/dispatch/plan-store';
+import { ACTIVE, NEXT_STATUS as NEXT, STATUS_LABEL, type JobStatus } from '@/lib/dispatch/replan';
+import { isDispatcher } from '@/lib/dispatch/roles';
 import { solveProblem, SolverUnavailable } from '@/lib/dispatch/solver-client';
-import { DATE_RE, dayOf, isRealDay, parseHHMM } from '@/lib/dispatch/time';
+import { DATE_RE, dayOf, hhmm, isoDay, isRealDay, parseHHMM } from '@/lib/dispatch/time';
 
 // The dispatcher board's writes (PRD §3, Phase 2). Dispatcher = owner or admin (D-25). Every id is a ref() so the
 // INV-01..04 harness drives these with cross-org ids; a tech or job outside the org is notFound, like a missing one.
@@ -139,6 +141,9 @@ export const planDay = orgAction(DISPATCH, z.object({ date }), async (ctx, { dat
   );
   // D-37: pins the checker already knows can't all be kept → say which, without asking the solver for a plan it can't give.
   if (pins) throw new Refused(pins);
+  // D-42: a whole-day plan would drop started work from the saved plan; only a re-plan keeps it in place (TR-03).
+  if (await withOrg(ctx, (tx) => startedJobs(tx, ctx.orgId, d), { atomic: false }))
+    throw new Refused('Work has started on this day, so it can’t be planned from scratch. Use “Re-plan from” instead: started jobs stay where they are.');
   let output: unknown;
   try {
     output = await solveProblem(problem);
@@ -150,9 +155,142 @@ export const planDay = orgAction(DISPATCH, z.object({ date }), async (ctx, { dat
     await lockDispatch(tx, ctx.orgId); // no other dispatch write can change the day between this re-read and the commit
     const again = await buildProblem(tx, ctx.orgId, d);
     if (JSON.stringify(again) !== JSON.stringify(problem)) throw new Refused('Jobs changed while planning. Nothing was saved; plan again.');
+    if (await startedJobs(tx, ctx.orgId, d)) throw new Refused('Work started on this day while planning. Nothing was saved; use “Re-plan from” instead.');
     return savePlanIfValid(tx, ctx, problem, output);
   });
   if (!result.ok && result.pinConflict) throw new Refused(result.pinConflict);
   if (!result.ok) throw new Refused(`The planner returned a plan that failed the checks (${result.codes.join(', ')}). Nothing was saved.`);
   redirect(`${board(ctx, d)}&saved=1`);
 });
+
+// ---------- Phase 3: mid-day re-plan, emergency insert, technician statuses ----------
+
+const asOfField = clock('Re-plan time');
+
+/**
+ * The re-plan itself (PRD §3 "Re-plan", TR-03): open work only, techs starting where their statuses put them, started
+ * jobs and pins kept. Same shape as planDay: read → solver (outside any transaction) → re-read under the dispatch lock
+ * and refuse if anything changed (D-28) → checkPlan + checkReplan → save. Throws Refused with the dispatcher's message.
+ */
+async function replan(ctx: OrgCtx, d: string, asOf: number): Promise<{ emergencies: { placed: string[]; unplaced: string[] } }> {
+  const state = await withOrg(ctx, (tx) => loadReplan(tx, ctx.orgId, d, asOf), { atomic: false });
+  const pins = replanPinMessage(state); // D-37/D-43: the same pin-conflict message Plan the day gives, before any solve
+  if (pins) throw new Refused(pins);
+  let output: unknown;
+  try {
+    output = await solveProblem(state.build.problem);
+  } catch (e) {
+    if (e instanceof SolverUnavailable) throw new Refused('The planner is unavailable right now. Nothing was changed; try again in a minute.');
+    throw e;
+  }
+  const result = await withOrg(ctx, async (tx) => {
+    await lockDispatch(tx, ctx.orgId);
+    const again = await loadReplan(tx, ctx.orgId, d, asOf);
+    if (again.basePlanId !== state.basePlanId || JSON.stringify(again.build) !== JSON.stringify(state.build) || JSON.stringify(again.input) !== JSON.stringify(state.input))
+      throw new Refused('The day changed while re-planning (a status, a job or a plan). Nothing was saved; re-plan again.');
+    return saveReplanIfValid(tx, ctx, state, output);
+  });
+  if (!result.ok && result.pinConflict) throw new Refused(result.pinConflict);
+  if (!result.ok) throw new Refused(`The planner returned a re-plan that failed the checks (${result.codes.join(', ')}). Nothing was saved.`);
+  return { emergencies: result.emergencies! };
+}
+
+const replanned = (ctx: OrgCtx, d: string, asOf: number) => `${board(ctx, d)}&replanned=${hhmm(asOf).replace(':', '')}`;
+
+export const replanDay = orgAction(DISPATCH, z.object({ date, asOf: asOfField }), async (ctx, { date: d, asOf }) => {
+  await replan(ctx, d, asOf);
+  redirect(replanned(ctx, d, asOf));
+});
+
+/**
+ * Emergency insert (PRD §3): add an emergency job and re-plan from the given time in one step (D-45). The job is saved
+ * first; if the re-plan then fails, the job stays on the board unassigned and the dispatcher is told why.
+ */
+export const insertEmergency = orgAction(
+  DISPATCH,
+  z.object({
+    date,
+    asOf: asOfField,
+    ref: z.string().trim().min(1, 'Give the job a number.').max(32),
+    customer: z.string().trim().min(1, 'Customer name is required.').max(120),
+    address: z.string().trim().min(1, 'Address is required.').max(200),
+    lat: num('Latitude', -90, 90),
+    lng: num('Longitude', -180, 180),
+    windowEnd: clock('Window end'),
+    durationMin: num('Duration', 1, 720).int('Duration is whole minutes.'),
+    skill: z.enum(SKILLS, { message: 'Pick a skill.' }),
+  }),
+  async (ctx, { asOf, ...i }) => {
+    if (i.windowEnd < asOf) throw new Refused('The window ends before the re-plan time.');
+    await withOrg(ctx, async (tx) => {
+      await lockDispatch(tx, ctx.orgId);
+      if (!(await currentPlan(tx, ctx.orgId, i.date))) throw new Refused('There is no plan for this day yet. Plan the day first, then insert the emergency.');
+      const exists = await tx.job.findFirst({ where: { ...inOrg(ctx), date: dayOf(i.date), ref: i.ref }, select: { id: true } });
+      if (exists) throw new Refused(`Job ${i.ref} already exists on ${i.date}.`);
+      const j = await tx.job.create({ data: { ...inOrg(ctx), ...i, date: dayOf(i.date), windowStart: asOf, priority: 'emergency' } });
+      await audit(ctx, 'dispatch.job_created', { targetType: 'job', targetId: j.id, data: { ref: i.ref, date: i.date, emergency: true, asOf: hhmm(asOf) } }, tx);
+    });
+    try {
+      await replan(ctx, i.date, asOf);
+    } catch (e) {
+      if (e instanceof Refused) throw new Refused(`Emergency job ${i.ref} was added, but the re-plan didn’t go through: ${e.message}`);
+      throw e;
+    }
+    redirect(replanned(ctx, i.date, asOf));
+  },
+);
+
+/**
+ * A technician's status for one of their stops (PRD §2): en route → on site → done, or can't complete. A technician
+ * may only touch a job on their own route in the day's current plan; anything else is notFound, the same as a missing
+ * id (TR-05). The dispatcher may set any stop's status. One active job (en route / on site) per technician.
+ */
+export const setJobStatus = orgAction(
+  null,
+  z.object({
+    id: ref('job'),
+    status: z.enum(['en_route', 'on_site', 'done', 'cant_complete'], { message: 'Pick a status.' }),
+    note: z.string().trim().max(500, 'Keep the note under 500 characters.').optional(),
+    back: z.enum(['my-day', 'stop', 'board']).optional(),
+  }),
+  async (ctx, i) => {
+    const where = await withOrg(ctx, async (tx) => {
+      await lockDispatch(tx, ctx.orgId);
+      const job = await tx.job.findFirst({ where: { ...inOrg(ctx), id: i.id } });
+      if (!job) notFound();
+      const day = isoDay(job.date);
+      const plan = await currentPlan(tx, ctx.orgId, day);
+      const stop = plan ? await tx.planStop.findFirst({ where: { ...inOrg(ctx), planId: plan.id, jobId: job.id }, include: { tech: { select: { id: true, userId: true, name: true } } } }) : null;
+      const dispatcher = isDispatcher(ctx.role);
+      if (!dispatcher && (!stop || stop.tech.userId !== ctx.userId)) notFound();
+      if (!stop) throw new Refused(`Job ${job.ref} is not on the current plan, so it has no technician to update.`);
+      const from = job.status as JobStatus;
+      if (!NEXT[from].includes(i.status)) throw new Refused(`Job ${job.ref} is ${STATUS_LABEL[from]}; it can’t go to ${STATUS_LABEL[i.status]}.`);
+      if (i.status === 'cant_complete' && !i.note) throw new Refused('Say why the job can’t be completed.');
+      if (ACTIVE.includes(i.status)) {
+        const busy = await tx.planStop.findFirst({
+          where: { ...inOrg(ctx), planId: plan!.id, techId: stop.tech.id, jobId: { not: job.id }, job: { status: { in: [...ACTIVE] } } },
+          include: { job: { select: { ref: true, status: true } } },
+        });
+        if (busy) throw new Refused(`${stop.tech.name} is already ${STATUS_LABEL[busy.job.status as JobStatus]} for job ${busy.job.ref}. Finish that one first.`);
+      }
+      const now = new Date();
+      await tx.job.update({
+        where: { id: job.id },
+        data: {
+          status: i.status,
+          ...(i.status === 'en_route' ? { enRouteAt: now } : {}),
+          ...(i.status === 'on_site' ? { onSiteAt: now } : {}),
+          ...(i.status === 'done' || i.status === 'cant_complete' ? { doneAt: now } : {}),
+          ...(i.status === 'cant_complete' ? { statusNote: i.note } : {}),
+        },
+      });
+      await audit(ctx, 'dispatch.job_status', { targetType: 'job', targetId: job.id, data: { from, to: i.status, techId: stop.tech.id, by: dispatcher ? 'dispatcher' : 'technician' } }, tx);
+      return { day, stopId: stop.id };
+    });
+    const base = `/o/${ctx.slug}/dispatch`;
+    if (i.back === 'stop') redirect(`${base}/stops/${where.stopId}`);
+    if (i.back === 'board') redirect(`${base}?date=${where.day}`);
+    redirect(`${base}/my-day?date=${where.day}`);
+  },
+);

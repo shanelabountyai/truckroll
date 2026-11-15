@@ -266,6 +266,39 @@ const add = (name: string, description: string, techs: TechIn[], jobs: JobIn[], 
     { assigned: ['J1'], unassigned: { E1: ['over-capacity'] } },
   );
 }
+{
+  const { job } = maker(17);
+  add(
+    '17-replan-lunch-taken',
+    'Mid-day re-plan (Phase 3, D-41): T1 is free at 12:10, inside its lunch window, but has already taken lunch (lunchTaken), so its route owes none. Only T1 is refrigerant-certified, and J1 (12:15–12:30, 60 min) fits only if no lunch is owed: before J1 it would miss the window, after J1 it would start after 13:00. T2 starts fresh and still owes lunch.',
+    [
+      tech('T1', 'Tech Alpha', ['repair', 'refrigerant-certified'], MUSKOGEE, { start: { point: { lat: 35.78, lng: -95.33 }, at: hm(12, 10) }, lunchTaken: true, maxJobs: 3 }),
+      tech('T2', 'Tech Beta', ['repair'], MUSKOGEE),
+    ],
+    [
+      job('J1', { skill: 'refrigerant-certified', windowStart: hm(12, 15), windowEnd: hm(12, 30), durationMin: 60, at: { lat: 35.78, lng: -95.33 }, spread: 0.01 }),
+      job('J2', { skill: 'repair', windowStart: hm(9), windowEnd: hm(11), spread: 0.03 }),
+    ],
+    { assigned: ['J1', 'J2'], unassigned: {}, noLunch: ['T1'], sequence: { T1: ['J1'], T2: ['J2'] } },
+  );
+}
+{
+  const { job } = maker(18);
+  add(
+    '18-replan-pin-outranks-emergency',
+    'Mid-day re-plan at 10:40 (Phase 3): T1 has one slot left and J1 is pinned to it (position 1 of the rest of its day). The refrigerant emergency E1 only T1 could do stays unassigned (over-capacity): a pin outranks an emergency (D-37). The repair emergency E2 goes to T2.',
+    [
+      tech('T1', 'Tech Alpha', ['repair', 'maintenance', 'refrigerant-certified'], MUSKOGEE, { start: { point: { lat: 35.76, lng: -95.35 }, at: hm(10, 40) }, maxJobs: 1 }),
+      tech('T2', 'Tech Beta', ['repair', 'maintenance'], MUSKOGEE, { start: { point: { lat: 35.74, lng: -95.38 }, at: hm(10, 40) } }),
+    ],
+    [
+      job('J1', { skill: 'maintenance', priority: 'maintenance', windowStart: hm(11), windowEnd: hm(15), pin: { techId: 'T1', position: 1 } }),
+      job('E1', { skill: 'refrigerant-certified', priority: 'emergency', windowStart: hm(10, 40), windowEnd: hm(14) }),
+      job('E2', { skill: 'repair', priority: 'emergency', windowStart: hm(10, 40), windowEnd: hm(14) }),
+    ],
+    { assigned: ['J1', 'E2'], unassigned: { E1: ['over-capacity'] }, sequence: { T1: ['J1'] } },
+  );
+}
 
 const dir = join(process.cwd(), 'fixtures/problems');
 mkdirSync(dir, { recursive: true });
