@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo entry</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0;background:#F3F5F7}a{color:#1F4E8A}</style>
+</helmet>
+<!-- Gap design (design pass 2026-11-18): /demo — pick a shop, then a role. Same look as Main.dc.html. Shops and accounts
+     come from seed:demo + seed:dispatch; names below are [placeholders]. Works at 390 px (cards stack). -->
+<div style="min-height: 100%; background: #F3F5F7; color: #13202B; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.45;">
+<header style="background: #13202B; color: #FFFFFF;">
+<div style="max-width: 960px; margin: 0 auto; padding: 12px 20px; display: flex; align-items: center; gap: 10px;">
+<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="7" fill="#F2A33A"/><path d="M8 19h14M10 19v-6l5-4 5 4v6" stroke="#13202B" stroke-width="2.2" fill="none" stroke-linejoin="round"/></svg>
+<span style="font-weight: 700; font-size: 17px;">Truckroll</span>
+<span style="font-size: 13px; color: #B9C4CF;">Demo · synthetic data</span>
+</div>
+</header>
+<main style="max-width: 960px; margin: 0 auto; padding: 24px 20px 40px; display: flex; flex-direction: column; gap: 18px;">
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<h1 style="margin: 0; font-size: 24px;">Demo sign-in</h1>
+<p style="margin: 0; color: #3F4D5A;">Pick a shop, then who you want to be. No email needed. Every shop, job and customer here is made up.</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+<sc-for list="{{shops}}" as="s" hint-placeholder-count="2">
+<section aria-label="{{s.name}}" style="background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+<h2 style="margin: 0; font-size: 18px;">{{s.name}}</h2>
+<span style="font-size: 13px; color: #52606D;">{{s.note}}</span>
+<sc-for list="{{s.roles}}" as="r" hint-placeholder-count="3">
+<button type="button" style="min-height: 56px; text-align: left; border-radius: 10px; border: 1px solid #8696A6; background: #FFFFFF; color: #13202B; font: inherit; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px;">
+<span style="font-weight: 700;">{{r.role}}</span>
+<span style="font-size: 13px; color: #3F4D5A;">{{r.what}} · {{r.email}}</span>
+</button>
+</sc-for>
+</section>
+</sc-for>
+</div>
+<p style="margin: 0; font-size: 13px; color: #52606D;">Demo only. Built by Lab Intelligence.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const roles = (d) => [
+      { role: 'Owner', what: 'Everything, settings, metrics', email: '[owner@' + d + ']' },
+      { role: 'Dispatcher', what: 'Plan, pin, re-plan, approve ETA texts', email: '[admin@' + d + ']' },
+      { role: 'Technician', what: 'Own day only, phone view', email: '[member@' + d + ']' }
+    ];
+    const shops = [
+      { name: '[Shop one]', note: '[n] technicians · [n] jobs today', roles: roles('shop-one') },
+      { name: '[Shop two]', note: '[n] technicians · [n] jobs today', roles: roles('shop-two') }
+    ];
+    return { shops };
+  }
+}
+</script>
+</body>
+</html>

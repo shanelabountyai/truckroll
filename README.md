@@ -40,7 +40,7 @@ move between days.
 
 1. **The dispatcher's board.** Sign in as `admin@acme.demo.test` → **Acme Studio** → **Dispatch**. The board opens on
    today: 24 jobs and 6 technicians, with skills, shifts and lunch windows.
-2. **Pin a job.** In the Jobs table, pin `J02` to **Tahlequah One**. Pinned jobs are never moved or dropped. If the
+2. **Pin a job.** In the Jobs table, pin `J10` (an afternoon window) to **Tahlequah One**. Pinned jobs are never moved or dropped. If the
    pins can't all be kept, the board names the pins to change and saves nothing.
 3. **Plan the day.** Press **Plan the day**. The solver answers in well under a second, and the result is shown only
    after the checker passes it: one timeline per technician, a stops table under each, and on-time %, drive minutes
@@ -48,7 +48,10 @@ move between days.
 4. **The technician's phone.** In a second browser, or with your phone's screen size, sign in as
    `member@acme.demo.test` and open **My day**. Muskogee One sees only their own stops. Press **On site**, then
    **Done**, on the first stop.
-5. **10:40, a no-heat call.** Back on the board, open **Emergency insert**. Re-plan from `10:40`, job `E1040`, any
+5. **10:40, a no-heat call.** First record the morning: a stop nobody marked counts as not started, so a re-plan
+   would treat morning jobs whose window has passed as unplaceable (and a pinned one blocks the re-plan). On the board,
+   open each stop that should have started by 10:40 (select its block on the timeline) and press **On site**, then
+   **Done** for the finished ones. Then open **Emergency insert** under **Mid-day re-plan**. Re-plan from `10:40`, job `E1040`, any
    address with latitude `35.765` and longitude `-95.345`, skill `repair`, and press **Add emergency and re-plan**.
    Started work and pins stay exactly where they were, and the emergency goes on a route. If the only room for it is
    taken by a pin, the pin wins and the board tells you.

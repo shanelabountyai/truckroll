@@ -88,3 +88,25 @@ covers booking), multi-day plans.
 | 4 | ETA text drafts (LLM via `withBudget`, template fallback), approval, metrics page, demo seed (Muskogee-area synthetic) | TR-06 green; demo script in README |
 
 ## 8. Open decisions (defaults in force; see `docs/DECISIONS.md`)
+
+## 9. Design, UX and accessibility requirements (design pass, 2026-11-18)
+
+The UI follows the Claude Design artboards in `docs/design/` (Main, MyDay, Metrics; gap designs BoardTools, StopDetail,
+DemoEntry, OrgHome; D-60 to D-64). Findings are from the three independent reviews of the built UI (design **DF**, UX
+**UX**, accessibility **A11Y**, numbered as in the design-pass PR). Tests: `e2e/design.spec.ts`, `tests/truckroll/look.test.ts`.
+
+| ID | Requirement | Test / source |
+|---|---|---|
+| DR-01 | Every Truckroll page has 0 axe violations (wcag2a, wcag2aa, wcag21a, wcag21aa) in the light theme and under a dark OS setting, including with every disclosure open (Emergency insert, Add a job, Add a technician, Can't complete). | `design.spec.ts` (A11Y-2, A11Y-3, A11Y-5) |
+| DR-02 | The app is light only: under `prefers-color-scheme: dark` the page keeps its light colours (D-66). | `design.spec.ts` |
+| DR-03 | Every job status and priority is shown as word + glyph + colour; colour is never the only signal. An emergency block on the timeline shows a visible "!". | `look.test.ts`, `design.spec.ts` (A11Y-1) |
+| DR-04 | Every board, My day, stop, metrics and home page fits 390 px with no sideways page scroll; wide tables and the timeline scroll inside a named, focusable region. | `design.spec.ts`, `dispatch.spec.ts` |
+| DR-05 | Every button and form control in the page content is at least 44 px tall; the tech's status buttons are 64 px. | `design.spec.ts` |
+| DR-06 | The first Tab stop is "Skip to content"; every focusable element shows a 3 px focus ring, date and time inputs included. Timeline blocks are links named "Stop n, job J… · skill, priority, start to end, …", and Enter opens the stop. | `design.spec.ts` (A11Y-4) |
+| DR-07 | A control's accessible name contains its visible label (WCAG 2.5.3). | axe `label-content-name-mismatch`; `design.spec.ts` (A11Y-2, A11Y-3) |
+| DR-08 | The timeline and tech screens say when work **starts** (the promise inside the window); arrival is labelled as arrival, with the wait before start. No copy says "every arrival is inside the window". | `design.spec.ts` (UX-M5) |
+| DR-09 | A job added after the current plan was saved (Add a job, or an emergency whose re-plan was refused, D-45) is listed under Not placed as "added after this plan was saved"; an emergency among them raises the red banner. | `design.spec.ts` (UX-M3) |
+| DR-10 | The metrics page leads with **Arrived on time** (actual, from recorded on-site times; "—" until there are some), with the planned figure beside it. | metrics page (DF-2) |
+| DR-11 | The header shows the org's own name, never a mockup shop name; no mockup sample values ship; the footer reads "All data is synthetic … Built by Lab Intelligence." | D-62; DF review |
+| DR-12 | A refused action shows as a red-edged message next to its form; Pin needs a technician chosen before it submits. | `theme.css`; UX-S1, UX-S2 |
+| DR-13 | The README demo script works on the seeded "today": the pin it suggests has an afternoon window, and the 10:40 step says to mark the morning's started stops first. | README (UX-M1) |

@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Owner metrics</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#F3F5F7}
+a{color:#1F4E8A}a:hover{color:#163A68}
+</style>
+</helmet>
+<div style="min-height: 100%; background: #F3F5F7; color: #13202B; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.45;">
+<header style="background: #13202B; color: #FFFFFF;">
+<div style="max-width: 1200px; margin: 0 auto; padding: 12px 20px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
+<span style="font-weight: 700; font-size: 17px;">Three Forks Heating &amp; Air · Metrics</span>
+<a href="Main.dc.html" style="color: #D3DBE3; font-size: 14px;">Back to dispatch</a>
+</div>
+</header>
+<main style="max-width: 1200px; margin: 0 auto; padding: 24px 20px 48px; display: flex; flex-direction: column; gap: 18px;">
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; justify-content: space-between;">
+<h1 style="margin: 0; font-size: 24px;">Last 30 days · sample data</h1>
+<span style="font-size: 13px; color: #52606D;">Plan = what the solver scheduled at 7 AM. Actual = what techs reported.</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+<div style="background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px;">
+<span style="font-size: 13px; font-weight: 600; color: #3F4D5A;">{{k.label}}</span>
+<span style="font-size: 34px; font-weight: 800; line-height: 1.1;">{{k.value}}</span>
+<span style="font-size: 13px; color: #3F4D5A;">{{k.note}}</span>
+</div>
+</sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 16px;">
+<section aria-labelledby="un" style="flex: 1 1 420px; background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="un" style="margin: 0; font-size: 17px;">Jobs left unplaced, by reason</h2>
+<sc-for list="{{reasons}}" as="r" hint-placeholder-count="3">
+<div style="display: grid; grid-template-columns: 130px 1fr 40px; gap: 10px; align-items: center;">
+<span style="font-weight: 600; font-size: 14px;">{{r.name}}</span>
+<div style="height: 18px; background: #EDF0F3; border-radius: 4px;"><div style="height: 18px; width: {{r.w}}; background: #1F4E8A; border-radius: 4px;"></div></div>
+<span style="font-weight: 700; text-align: right;">{{r.n}}</span>
+</div>
+</sc-for>
+<p style="margin: 0; font-size: 13px; color: #3F4D5A;">[One-line takeaway, written from the seeded numbers once Phase 3 metrics run.]</p>
+</section>
+<section aria-labelledby="pa" style="flex: 1 1 420px; background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+<h2 id="pa" style="margin: 0; font-size: 17px;">Plan vs actual, per tech</h2>
+<div style="overflow-x: auto;">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+<thead><tr style="text-align: left; color: #3F4D5A; font-size: 13px;"><th scope="col" style="padding: 6px 0;">Tech</th><th scope="col" style="text-align: right;">On time</th><th scope="col" style="text-align: right;">Drive min/day</th><th scope="col" style="text-align: right;">Utilization</th></tr></thead>
+<tbody>
+<sc-for list="{{rows}}" as="t" hint-placeholder-count="4">
+<tr style="border-top: 1px solid #EDF0F3;"><td style="padding: 9px 0; font-weight: 600;">{{t.name}}</td><td style="text-align: right;">{{t.ot}}</td><td style="text-align: right;">{{t.dr}}</td><td style="text-align: right;">{{t.ut}}</td></tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+<p style="margin: 0; font-size: 13px; color: #52606D;">All figures are synthetic, generated for this demo. Built by Lab Intelligence.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const kpis = [
+      { label: 'Arrived on time', value: '[XX]%', note: 'Within the customer window, plan vs actual' },
+      { label: 'Drive minutes per tech-day', value: '[XX]', note: 'Solver plan; actual adds traffic' },
+      { label: 'Utilization', value: '[XX]%', note: 'Job minutes / paid minutes' },
+      { label: 'Emergencies placed same day', value: '[XX] of [XX]', note: 'The number prospects ask about first' }
+    ];
+    const reasons = [
+      { name: 'over-capacity', n: '[n]', w: '70%' },
+      { name: 'no-window-fit', n: '[n]', w: '40%' },
+      { name: 'no-skill', n: '[n]', w: '20%' }
+    ];
+    const rows = ['Ray', 'Dana', 'Luis', 'Tasha'].map((name) => ({ name, ot: '[XX]%', dr: '[XX]', ut: '[XX]%' }));
+    return { kpis, reasons, rows };
+  }
+}
+</script>
+</body>
+</html>

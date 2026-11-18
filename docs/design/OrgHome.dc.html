@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shop home</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0;background:#F3F5F7}a{color:#1F4E8A}</style>
+</helmet>
+<!-- Gap design (design pass 2026-11-18): /o/[org] — the shop's home. Dispatchers get the board and metrics; a technician
+     gets My day; a new shop keeps the template's "Nothing here yet" heading (D-30). Shop header as in Main.dc.html. -->
+<div style="min-height: 100%; background: #F3F5F7; color: #13202B; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.45;">
+<header style="background: #13202B; color: #FFFFFF;">
+<div style="max-width: 960px; margin: 0 auto; padding: 10px 20px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="7" fill="#F2A33A"/><path d="M8 19h14M10 19v-6l5-4 5 4v6" stroke="#13202B" stroke-width="2.2" fill="none" stroke-linejoin="round"/></svg>
+<span style="font-weight: 700; font-size: 17px;">[Shop name]</span>
+<span style="font-size: 13px; color: #B9C4CF;">Sample shop · synthetic data</span>
+</div>
+<nav aria-label="Main" style="display: flex; gap: 18px; font-size: 14px;"><a href="Main.dc.html" style="color: #D3DBE3; text-decoration: none; padding: 8px 0;">Dispatch</a><a href="Metrics.dc.html" style="color: #D3DBE3; text-decoration: none; padding: 8px 0;">Metrics</a></nav>
+</div>
+</header>
+<main style="max-width: 960px; margin: 0 auto; padding: 24px 20px 40px; display: flex; flex-direction: column; gap: 16px;">
+<h1 style="margin: 0; font-size: 24px;">{{v.heading}}</h1>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+<sc-for list="{{cards}}" as="c" hint-placeholder-count="2">
+<a href="{{c.href}}" style="background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: #13202B; min-height: 44px;">
+<span style="font-weight: 700; font-size: 17px; color: #1F4E8A;">{{c.title}} <span aria-hidden="true">→</span></span>
+<span style="font-size: 14px; color: #3F4D5A;">{{c.what}}</span>
+</a>
+</sc-for>
+</div>
+<p style="margin: 0; font-size: 13px; color: #52606D;">New shop: "Open the dispatch board to add your technicians and the day's jobs, or invite your team."</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":960,"height":520}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const v = { heading: 'Truckroll' };
+    const cards = [
+      { title: 'Open the dispatch board', what: "Today's jobs, pins, the plan and ETA texts", href: 'Main.dc.html' },
+      { title: 'Metrics', what: 'On time, drive minutes, utilization, plan vs actual', href: 'Metrics.dc.html' }
+    ];
+    return { v, cards };
+  }
+}
+</script>
+</body>
+</html>

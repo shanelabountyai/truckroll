@@ -1,5 +1,25 @@
 # NEXT
 
+## ▶ 2026-11-18: Truckroll design pass (branch `design/impl`, one PR, not merged)
+Built from the Claude Design canvas exported in `docs/design/` (run instructions `docs/design/RUN.md`):
+- **Built:** shop header + footer (all org pages), dispatch board (Main + gap BoardTools), My day (MyDay), stop page (gap
+  StopDetail), metrics (Metrics), shop home (gap OrgHome). Base layer `src/app/ui/theme.ts` + `theme.css` (D-65), light
+  only (D-66). No business logic, schema, permission or API change.
+- **Gap designs added:** `BoardTools`, `StopDetail`, `DemoEntry`, `OrgHome` (`.dc.html`, in `canvas.json`). DemoEntry is
+  designed but not built: `/demo` is template-owned (D-64).
+- **Reviews:** three independent reviewers (design fidelity, UX, accessibility); accepted findings fixed and captured as
+  PRD §9 DR-01..DR-13; the rest are listed in D-73 and the PR.
+- **Tests added:** `e2e/design.spec.ts` (axe WCAG 2.1 AA on every page state it reaches, light + dark OS setting, 390 px,
+  44 px targets, keyboard), `tests/truckroll/look.test.ts`. Dev dependency `@axe-core/playwright` 4.14.0 (D-71).
+- **Gate (cloud session, 2026-11-18):** lint 0 errors, typecheck clean, vitest 755 passed / 25 skipped, Playwright 25/25,
+  pytest 135 passed, solver vitest subset 149 passed, bench worst p95 38 ms, `foundation:check-modules` OK. Not run
+  here: `prisma migrate deploy` / `migrate diff` (Prisma engines blocked, D-12; migrations applied by the stand-in; no
+  schema change in this PR), `foundation:drift` against `v1.7.0` (tag not in this repo's clone; no template-owned path
+  changed). CI decides.
+- **Shane's hand steps:** open the Design canvas (https://claude.ai/artifact/QchpXfvqN5AXsRJag7VS8V) and add the four gap
+  artboards if you want them there; review the PR; merge or not. Decide the D-73 items (re-plan with unmarked stops,
+  form fields clearing on refusal, ETA edit checks, `/demo` layout upstream).
+
 ## ▶ 2026-11-17: v1.7.0 PR open (branch `security/v1.7.0`): A-04, A-08 (owner decisions 2026-11-17)
 Webhook endpoints are disabled with their creator's membership; a demotion below `apikeys.manage` revokes keys and disables
 endpoints. One migration (guarded; backfills creators from the audit log and disables orphans), one breaking change

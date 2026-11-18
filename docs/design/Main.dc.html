@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Dispatch board</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;background:#F3F5F7}
+a{color:#1F4E8A}a:hover{color:#163A68}
+</style>
+</helmet>
+<div style="min-height: 100%; background: #F3F5F7; color: #13202B; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.45;">
+<header style="background: #13202B; color: #FFFFFF;">
+<div style="max-width: 1400px; margin: 0 auto; padding: 10px 20px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="7" fill="#F2A33A"/><path d="M8 19h14M10 19v-6l5-4 5 4v6" stroke="#13202B" stroke-width="2.2" fill="none" stroke-linejoin="round"/></svg>
+<span style="font-weight: 700; font-size: 17px;">Three Forks Heating &amp; Air</span>
+<span style="font-size: 13px; color: #B9C4CF;">Sample shop · synthetic data</span>
+</div>
+<nav aria-label="Main" style="display: flex; gap: 18px; font-size: 14px;">
+<a href="#" style="color: #FFFFFF; font-weight: 600; text-decoration: none; border-bottom: 2px solid #F2A33A; padding: 8px 0;">Dispatch</a>
+<a href="#" style="color: #D3DBE3; text-decoration: none; padding: 8px 0;">Jobs</a>
+<a href="Metrics.dc.html" style="color: #D3DBE3; text-decoration: none; padding: 8px 0;">Metrics</a>
+</nav>
+</div>
+</header>
+
+<main style="max-width: 1400px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+
+<section role="alert" style="background: #B42A0E; color: #FFFFFF; border-radius: 12px; padding: 14px 18px; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between;">
+<div style="display: flex; gap: 12px; align-items: flex-start;">
+<span aria-hidden="true" style="font-size: 22px; line-height: 1; font-weight: 800;">!</span>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<strong style="font-size: 17px;">Emergency not placed: no heat, Fort Gibson (call in 10:40 AM)</strong>
+<span style="font-size: 14px; color: #FFE3DB;">Reason: <strong>over capacity</strong>. Every tech with the gas-furnace skill is booked until 3:30 PM, and the customer's window ends 2:00 PM. Unpinning Luis's 1:00 PM maintenance would make room.</span>
+</div>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 2px solid #FFFFFF; background: #FFFFFF; color: #8A1E08; font: inherit; font-weight: 700;">Unpin and re-plan</button>
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 2px solid #FFFFFF; background: transparent; color: #FFFFFF; font: inherit; font-weight: 600;">Call customer</button>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start;">
+
+<section aria-labelledby="tl" style="flex: 999 1 820px; min-width: 0; background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; overflow: hidden;">
+<div style="padding: 14px 16px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; border-bottom: 1px solid #E3E8ED;">
+<h1 id="tl" style="margin: 0; font-size: 19px;">Tuesday, Nov 17 · 4 techs · 17 jobs placed</h1>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: #3F4D5A;">
+<span><span aria-hidden="true" style="color: #B42A0E;">■</span> Emergency</span><span><span aria-hidden="true" style="color: #1F4E8A;">■</span> Standard</span><span><span aria-hidden="true" style="color: #8696A6;">■</span> Maintenance</span><span><strong>PIN</strong> Pinned (never moved)</span><span><span aria-hidden="true">✓</span> Done / on site (locked)</span>
+</div>
+</div>
+<div style="overflow-x: auto;">
+<div style="min-width: 760px; padding: 8px 16px 16px;">
+<div style="display: grid; grid-template-columns: 120px 1fr; gap: 0;">
+<span></span>
+<div style="position: relative; height: 22px; font-size: 12px; color: #52606D;">
+<sc-for list="{{hours}}" as="h" hint-placeholder-count="12"><span style="position: absolute; left: {{h.left}}; transform: translateX(-50%);">{{h.label}}</span></sc-for>
+</div>
+</div>
+<sc-for list="{{techs}}" as="t" hint-placeholder-count="4">
+<div style="display: grid; grid-template-columns: 120px 1fr; align-items: center; border-top: 1px solid #EDF0F3;">
+<div style="display: flex; flex-direction: column; padding: 10px 8px 10px 0;">
+<span style="font-weight: 700;">{{t.name}}</span>
+<span style="font-size: 12px; color: #52606D;">{{t.skills}}</span>
+</div>
+<div style="position: relative; height: 64px; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(100% / 11 - 1px), #EDF0F3 calc(100% / 11 - 1px), #EDF0F3 calc(100% / 11));">
+<sc-for list="{{t.jobs}}" as="j" hint-placeholder-count="4">
+<div style="position: absolute; top: 8px; height: 48px; left: {{j.left}}; width: {{j.width}}; box-sizing: border-box; border-radius: 7px; background: {{j.bg}}; color: {{j.fg}}; border: {{j.border}}; padding: 4px 7px; overflow: hidden; display: flex; flex-direction: column; font-size: 12px; line-height: 1.25;">
+<span style="font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{j.mark}} {{j.title}}</span>
+<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.92;">{{j.meta}}</span>
+</div>
+</sc-for>
+<div aria-hidden="true" style="position: absolute; top: 0; bottom: 0; left: 31.8%; width: 2px; background: #B42A0E;"></div>
+</div>
+</div>
+</sc-for>
+<p style="margin: 10px 0 0; font-size: 12px; color: #52606D;">Red line: now, 10:30 AM. Grey stripes are drive time. Arrivals never fall after a customer's window.</p>
+</div>
+</div>
+</section>
+
+<aside style="flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 16px;">
+<section aria-labelledby="un" style="background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+<h2 id="un" style="margin: 0; font-size: 16px;">Not placed (3)</h2>
+<sc-for list="{{unplaced}}" as="u" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 3px; padding: 10px 0; border-top: 1px solid #EDF0F3;">
+<div style="display: flex; justify-content: space-between; gap: 8px;"><span style="font-weight: 600;">{{u.title}}</span><span style="font-size: 12px; font-weight: 700; color: {{u.pc}};">{{u.prio}}</span></div>
+<span style="align-self: flex-start; font-size: 12px; font-weight: 700; color: #3F4D5A; border: 1px solid #8696A6; border-radius: 6px; padding: 0 6px;">{{u.reason}}</span>
+<span style="font-size: 13px; color: #3F4D5A;">{{u.why}}</span>
+</div>
+</sc-for>
+</section>
+<section aria-labelledby="eta" style="background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+<h2 id="eta" style="margin: 0; font-size: 16px;">ETA texts to approve (2)</h2>
+<div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #EDF0F3; padding-top: 10px;">
+<div style="display: flex; justify-content: space-between; font-size: 13px;"><span style="font-weight: 600;">To: Customer 0412 · Dana's 1:15 PM stop</span><span style="color: #8A5A00; font-weight: 700;">◐ Draft</span></div>
+<p style="margin: 0; font-size: 14px; background: #F3F5F7; border-radius: 8px; padding: 8px 10px;">Hi, this is Three Forks Heating &amp; Air. Dana is scheduled to arrive between 1:00 and 1:30 PM today. Reply STOP to opt out.</p>
+<div style="display: flex; gap: 8px;"><button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: none; background: #1F4E8A; color: #FFFFFF; font: inherit; font-weight: 600;">Approve and send</button><button type="button" style="min-height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid #8696A6; background: #FFFFFF; font: inherit;">Edit</button></div>
+</div>
+<div style="display: flex; justify-content: space-between; font-size: 13px; border-top: 1px solid #EDF0F3; padding-top: 10px;"><span>Customer 0377 · Ray's 11:00 AM stop</span><span style="color: #1F4E8A; font-weight: 700;">✓ Sent, approved by Shane 9:48</span></div>
+</section>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const start = 7, span = 11;
+    const pct = (h) => ((h - start) / span * 100).toFixed(2) + '%';
+    const hours = [];
+    for (let h = 7; h <= 18; h++) hours.push({ left: pct(h), label: (h > 12 ? h - 12 : h) + (h >= 12 ? 'p' : 'a') });
+    const style = {
+      em: { bg: '#B42A0E', fg: '#FFFFFF', border: '2px solid #8A1E08' },
+      st: { bg: '#1F4E8A', fg: '#FFFFFF', border: '1px solid #163A68' },
+      mt: { bg: '#E3E8ED', fg: '#13202B', border: '1px solid #8696A6' },
+      done: { bg: '#FFFFFF', fg: '#3F4D5A', border: '1px dashed #8696A6' }
+    };
+    const job = (s, e, kind, title, meta, mark) => ({ left: pct(s), width: ((e - s) / span * 100).toFixed(2) + '%', title, meta, mark: mark || '', ...style[kind] });
+    const techs = [
+      { name: 'Ray', skills: 'Gas furnace · heat pump', jobs: [job(7.75, 9.25, 'done', 'Tune-up', 'Done 9:12', '✓'), job(9.75, 11.5, 'st', 'No cooling', 'On site · locked', '✓'), job(12.25, 14.75, 'st', 'Furnace repair', 'Arr 12:15 · slack 20m'), job(15.25, 16.5, 'mt', 'Filter plan', 'Arr 3:15')] },
+      { name: 'Dana', skills: 'Gas furnace · ducts', jobs: [job(8, 10.25, 'st', 'Duct leak', 'Done 10:02', '✓'), job(10.75, 12.5, 'em', 'No heat', 'En route · arr 10:45'), job(13, 14.5, 'st', 'Thermostat', 'Arr 1:15 · slack 15m'), job(15, 17, 'st', 'Install quote', 'Arr 3:00')] },
+      { name: 'Luis', skills: 'Gas furnace · boilers', jobs: [job(8.5, 10.5, 'st', 'Boiler noise', 'Done 10:20', '✓'), job(11, 12.5, 'st', 'Water heater', 'Arr 11:05'), job(13, 15.5, 'mt', 'Maintenance', 'Pinned by owner', 'PIN'), job(16, 17.25, 'mt', 'Tune-up', 'Arr 4:00')] },
+      { name: 'Tasha', skills: 'Heat pump · electrical', jobs: [job(7.5, 9, 'done', 'Tune-up', 'Done 8:55', '✓'), job(9.5, 12, 'st', 'Heat pump fault', 'On site · locked', '✓'), job(12.75, 14, 'mt', 'Filter plan', 'Arr 12:45'), job(14.5, 16.75, 'st', 'Breaker trips', 'Arr 2:30 · slack 10m')] }
+    ];
+    const unplaced = [
+      { title: 'No heat · Fort Gibson', prio: 'EMERGENCY', pc: '#B42A0E', reason: 'over-capacity', why: 'Window ends 2:00 PM; first gas-furnace opening is 3:30 PM.' },
+      { title: 'Mini-split install', prio: 'Standard', pc: '#1F4E8A', reason: 'no-skill', why: 'Needs a mini-split certification; no tech on today has it.' },
+      { title: 'Spring tune-up · Haskell', prio: 'Maintenance', pc: '#3F4D5A', reason: 'no-window-fit', why: 'Customer window 8–9 AM has passed; offer tomorrow.' }
+    ];
+    return { hours, techs, unplaced };
+  }
+}
+</script>
+</body>
+</html>
