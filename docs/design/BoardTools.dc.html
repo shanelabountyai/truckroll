@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Board tools</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>body{margin:0;background:#F3F5F7}a{color:#1F4E8A}</style>
+</helmet>
+<!-- Gap design (design pass 2026-11-18): the dispatch board's working parts that Main.dc.html leaves out — the day bar
+     (day picker, Plan the day), Mid-day re-plan and Emergency insert, the Jobs table with pins, Technicians, Add a job /
+     Add a technician, and the no-plan empty state. Sits under the timeline + aside of Main.dc.html. [placeholders] only. -->
+<div style="min-height: 100%; background: #F3F5F7; color: #13202B; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 15px; line-height: 1.45;">
+<main style="max-width: 1400px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+
+<div style="display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between;">
+<div style="display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline;">
+<h1 style="margin: 0; font-size: 22px;">Dispatch · [YYYY-MM-DD]</h1>
+<a href="Metrics.dc.html" style="font-size: 14px; font-weight: 600;">Metrics for [YYYY-MM-DD]</a>
+</div>
+<form style="display: flex; gap: 8px; align-items: center;">
+<label style="display: flex; gap: 6px; align-items: center; font-weight: 600; font-size: 14px;">Day <input type="date" style="min-height: 44px; box-sizing: border-box; border: 1px solid #8696A6; border-radius: 8px; padding: 0 8px; font: inherit;"></label>
+<button type="submit" style="min-height: 44px; padding: 0 14px; border-radius: 8px; border: 1px solid #8696A6; background: #FFFFFF; font: inherit; font-weight: 600;">Show</button>
+</form>
+</div>
+
+<section aria-labelledby="pl" style="background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 16px; display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center;">
+<h2 id="pl" style="margin: 0; font-size: 16px; flex-basis: 100%;">No plan saved for this day yet.</h2>
+<button type="button" style="min-height: 48px; padding: 0 20px; border-radius: 8px; border: none; background: #1F4E8A; color: #FFFFFF; font: inherit; font-weight: 700; font-size: 16px;">Plan the day</button>
+<span style="flex: 1 1 420px; font-size: 13px; color: #3F4D5A;">Pinned jobs never move. If the pins can't all be kept, nothing is planned and you're told which pins to change. Jobs are scheduled only inside their window. Every plan is checked before it is saved.</span>
+</section>
+
+<section aria-labelledby="rp" style="background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="rp" style="margin: 0; font-size: 16px;">Mid-day re-plan</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;">
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600;">Re-plan from <input type="time" style="min-height: 44px; box-sizing: border-box; border: 1px solid #8696A6; border-radius: 8px; padding: 0 8px; font: inherit;"></label>
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: none; background: #1F4E8A; color: #FFFFFF; font: inherit; font-weight: 700;">Re-plan</button>
+<span style="flex: 1 1 360px; font-size: 13px; color: #3F4D5A;">Jobs en route, on site, done or can't-complete stay put. A stop nobody marked counts as not started. Pins are kept; an emergency never displaces a pin.</span>
+</div>
+<details open style="border-top: 1px solid #EDF0F3; padding-top: 10px;">
+<summary style="min-height: 44px; display: flex; align-items: center; font-weight: 700; color: #B42A0E; cursor: pointer;"><span aria-hidden="true" style="margin-right: 6px;">!</span>Emergency insert</summary>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 8px;">
+<sc-for list="{{fields}}" as="f" hint-placeholder-count="11">
+<label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600;">{{f.label}}<input style="min-height: 44px; box-sizing: border-box; border: 1px solid #8696A6; border-radius: 8px; padding: 0 8px; font: inherit;" placeholder="{{f.ph}}"></label>
+</sc-for>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px;">
+<button type="button" style="min-height: 44px; padding: 0 16px; border-radius: 8px; border: 2px solid #8A1E08; background: #B42A0E; color: #FFFFFF; font: inherit; font-weight: 700;">Add emergency and re-plan</button>
+<span style="font-size: 13px; color: #3F4D5A;">The window opens at the re-plan time. If the re-plan can't be saved, the job stays on the board unassigned and you're told why.</span>
+</div>
+</details>
+</section>
+
+<section aria-labelledby="jb" style="background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; overflow: hidden;">
+<div style="padding: 14px 16px; border-bottom: 1px solid #E3E8ED;"><h2 id="jb" style="margin: 0; font-size: 16px;">Jobs ([N])</h2></div>
+<div style="overflow-x: auto;">
+<table style="width: 100%; min-width: 980px; border-collapse: collapse; font-size: 14px;">
+<thead><tr style="text-align: left; color: #3F4D5A; font-size: 13px; background: #F3F5F7;"><th scope="col" style="padding: 8px 16px;">Job</th><th scope="col">Customer</th><th scope="col">Window</th><th scope="col">Duration</th><th scope="col">Skill</th><th scope="col">Priority</th><th scope="col">Status</th><th scope="col">Planned</th><th scope="col">Pin</th></tr></thead>
+<tbody>
+<sc-for list="{{jobs}}" as="j" hint-placeholder-count="4">
+<tr style="border-top: 1px solid #EDF0F3; vertical-align: top;">
+<td style="padding: 10px 16px; font-weight: 700;">{{j.ref}}</td>
+<td style="padding: 10px 8px 10px 0;">[Customer]<br><span style="font-size: 12px; color: #52606D;">[Synthetic address] · [918-555-01xx]</span></td>
+<td style="padding: 10px 8px 10px 0;">[hh:mm]–[hh:mm]</td>
+<td style="padding: 10px 8px 10px 0;">[n] min</td>
+<td style="padding: 10px 8px 10px 0;">[skill]</td>
+<td style="padding: 10px 8px 10px 0; font-weight: 700; color: {{j.pc}};"><span aria-hidden="true">{{j.pg}}</span> {{j.prio}}</td>
+<td style="padding: 10px 8px 10px 0;"><span style="border: 1px solid #8696A6; border-radius: 999px; padding: 0 8px; font-size: 12px; font-weight: 700; color: #3F4D5A;"><span aria-hidden="true">{{j.sg}}</span> {{j.status}}</span></td>
+<td style="padding: 10px 8px 10px 0;">[Tech] #[n]</td>
+<td style="padding: 6px 16px 6px 0;"><div style="display: flex; gap: 6px; align-items: center;"><select style="min-height: 40px; border: 1px solid #8696A6; border-radius: 8px; font: inherit;"><option>Tech…</option></select><input placeholder="#" style="width: 52px; min-height: 40px; box-sizing: border-box; border: 1px solid #8696A6; border-radius: 8px; padding: 0 6px; font: inherit;"><button type="button" style="min-height: 40px; padding: 0 12px; border-radius: 8px; border: 1px solid #1F4E8A; background: #FFFFFF; color: #1F4E8A; font: inherit; font-weight: 700;">Pin</button></div></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+
+<section aria-labelledby="te" style="background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; overflow: hidden;">
+<div style="padding: 14px 16px; border-bottom: 1px solid #E3E8ED;"><h2 id="te" style="margin: 0; font-size: 16px;">Technicians ([N])</h2></div>
+<div style="overflow-x: auto;">
+<table style="width: 100%; min-width: 720px; border-collapse: collapse; font-size: 14px;">
+<thead><tr style="text-align: left; color: #3F4D5A; font-size: 13px; background: #F3F5F7;"><th scope="col" style="padding: 8px 16px;">Name</th><th scope="col">Skills</th><th scope="col">Shift</th><th scope="col">Lunch window</th><th scope="col">Max jobs</th><th scope="col">Login</th></tr></thead>
+<tbody><tr style="border-top: 1px solid #EDF0F3;"><td style="padding: 10px 16px; font-weight: 700;">[Tech]</td><td>[skill · skill]</td><td>[hh:mm]–[hh:mm]</td><td>[hh:mm]–[hh:mm]</td><td>[n]</td><td>[login or —]</td></tr></tbody>
+</table>
+</div>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 16px;">
+<details style="flex: 1 1 420px; background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 4px 16px;"><summary style="min-height: 44px; display: flex; align-items: center; font-weight: 700; cursor: pointer;">Add a job</summary><p style="font-size: 13px; color: #3F4D5A;">Same field grid as Emergency insert, plus window start and priority.</p></details>
+<details style="flex: 1 1 420px; background: #FFFFFF; border: 1px solid #D5DCE3; border-radius: 12px; padding: 4px 16px;"><summary style="min-height: 44px; display: flex; align-items: center; font-weight: 700; cursor: pointer;">Add a technician</summary><p style="font-size: 13px; color: #3F4D5A;">Name, skills as checkboxes, shift, lunch window, home location, max jobs, login.</p></details>
+</div>
+<p style="margin: 0; font-size: 13px; color: #52606D;">All data is synthetic. Built by Lab Intelligence.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1300}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const fields = ['Re-plan from', 'Window end', 'Duration (min)', 'Job number', 'Customer', 'Address', 'Phone', 'Latitude', 'Longitude', 'Skill'].map((label) => ({ label, ph: '[' + label.toLowerCase() + ']' }));
+    const jobs = [
+      { ref: '[J01]', prio: 'emergency', pc: '#B42A0E', pg: '!', status: 'on site', sg: '●' },
+      { ref: '[J02]', prio: 'standard', pc: '#1F4E8A', pg: '■', status: 'scheduled', sg: '○' },
+      { ref: '[J03]', prio: 'maintenance', pc: '#3F4D5A', pg: '□', status: 'done', sg: '✓' },
+      { ref: '[J04]', prio: 'standard', pc: '#1F4E8A', pg: '■', status: 'unscheduled', sg: '–' }
+    ];
+    return { fields, jobs };
+  }
+}
+</script>
+</body>
+</html>
