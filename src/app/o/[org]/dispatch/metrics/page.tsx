@@ -8,6 +8,7 @@ import { isDispatcher } from '@/lib/dispatch/roles';
 import { dayOf, hhmm, isRealDay, localMinuteOn, todayIn } from '@/lib/dispatch/time';
 import { C, btn, card, field, input, td, th } from '@/app/ui/theme';
 import { dayName, wall } from '../look';
+import { Scroll } from '@/app/ui/scroll';
 
 export const metadata = { title: 'Dispatch metrics' };
 
@@ -122,7 +123,7 @@ export default async function DispatchMetrics({ params, searchParams }: { params
 
       {current && metrics && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-          <section aria-labelledby="by-reason" style={{ ...panel, flex: '1 1 420px' }}>
+          <section aria-labelledby="by-reason" style={{ ...panel, flex: '1 1 420px', minWidth: 0 }}>
             <h2 id="by-reason" style={{ margin: 0, fontSize: 17 }}>Jobs left unplaced, by reason</h2>
             {REASONS.map((r) => {
               const n = metrics.unassignedByReason[r] ?? 0;
@@ -140,12 +141,12 @@ export default async function DispatchMetrics({ params, searchParams }: { params
               {topReason ? `${metrics.unassigned} job${metrics.unassigned === 1 ? '' : 's'} left unplaced; the most common reason is ${REASON_LABEL[topReason]} (${metrics.unassignedByReason[topReason]}).` : 'Every job of the day is on a route.'}
             </p>
           </section>
-          <section aria-labelledby="per-tech" style={{ ...panel, flex: '1 1 420px', gap: 10 }}>
+          <section aria-labelledby="per-tech" style={{ ...panel, flex: '1 1 420px', minWidth: 0, gap: 10 }}>
             <h2 id="per-tech" style={{ margin: 0, fontSize: 17 }}>Plan vs actual, per tech</h2>
             {perTech.length === 0 ? (
               <p style={{ margin: 0, fontSize: 14 }}>No technician has a stop on this plan.</p>
             ) : (
-              <div style={{ overflowX: 'auto' }}>
+              <Scroll label="Per technician table (scrolls sideways)">
                 <table aria-label="Per technician" style={{ width: '100%', fontSize: 14 }}>
                   <thead>
                     <tr><th scope="col" style={th}>Tech</th><th scope="col" style={{ ...th, textAlign: 'right' }}>Stops</th><th scope="col" style={{ ...th, textAlign: 'right' }}>Drive min (plan)</th><th scope="col" style={{ ...th, textAlign: 'right' }}>Arrived in window (actual)</th></tr>
@@ -161,7 +162,7 @@ export default async function DispatchMetrics({ params, searchParams }: { params
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </Scroll>
             )}
             <p style={{ margin: 0, fontSize: 13, color: C.text2 }}>“—” until the technician records an on-site time on this day.</p>
           </section>
@@ -182,7 +183,7 @@ export default async function DispatchMetrics({ params, searchParams }: { params
               <div style={small} aria-label="Average job length vs estimate"><span style={kpiLabel}>Average job length vs estimate</span><strong style={{ fontSize: 20 }}>{signed(pva.avgDurationDeltaMin)}</strong></div>
             </div>
           )}
-          <div style={{ overflowX: 'auto' }}>
+          <Scroll label="Stops table (scrolls sideways)">
             <table aria-label="Stops, plan vs actual" style={{ fontSize: 14, width: '100%', minWidth: 900 }}>
               <thead>
                 <tr>{['Tech', '#', 'Job', 'Status', 'Planned', 'On site', 'Done', 'Start vs plan', 'Length vs estimate', 'In window'].map((h) => <th key={h} scope="col" style={th}>{h}</th>)}</tr>
@@ -204,14 +205,14 @@ export default async function DispatchMetrics({ params, searchParams }: { params
                 ))}
               </tbody>
             </table>
-          </div>
+          </Scroll>
         </section>
       )}
 
       {plans.length > 0 && (
         <section aria-label="Plans saved this day" style={panel}>
           <h2 style={{ margin: 0, fontSize: 17 }}>Plans saved this day ({plans.length})</h2>
-          <div style={{ overflowX: 'auto' }}>
+          <Scroll label="Plan history table (scrolls sideways)">
             <table aria-label="Plan history" style={{ fontSize: 14, width: '100%', minWidth: 640 }}>
               <thead>
                 <tr>{['Saved (Chicago time)', 'Kind', 'Stops', 'Unassigned', 'On time', 'Drive', 'Utilization'].map((h) => <th key={h} scope="col" style={th}>{h}</th>)}</tr>
@@ -233,7 +234,7 @@ export default async function DispatchMetrics({ params, searchParams }: { params
                 })}
               </tbody>
             </table>
-          </div>
+          </Scroll>
         </section>
       )}
     </main>

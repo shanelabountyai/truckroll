@@ -2,6 +2,7 @@ import type { Route } from '@/lib/dispatch/contract';
 import type { JobStatus } from '@/lib/dispatch/replan';
 import { hhmm } from '@/lib/dispatch/time';
 import { C } from '@/app/ui/theme';
+import { Scroll } from '@/app/ui/scroll';
 import { PRIORITY_LOOK, StatusBadge, clock, wall } from './look';
 
 // The day as one grid, a row per technician (docs/design/Main.dc.html; PRD §7 Phase 2 "plan view per tech as a
@@ -65,7 +66,7 @@ export function DayTimeline({
   const hourLine = `repeating-linear-gradient(90deg, ${C.ruleSoft} 0 1px, transparent 1px calc(100% / ${span / 60}))`;
   const showNow = now !== null && now >= from && now <= to;
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <Scroll label="Timeline (scrolls sideways)">
       <div style={{ minWidth: 760, padding: '8px 16px 16px' }}>
         <div aria-hidden="true" style={{ display: 'grid', gridTemplateColumns: '140px 1fr' }}>
           <span />
@@ -113,18 +114,21 @@ export function DayTimeline({
                   const pinned = !!j?.pinTechId;
                   const { mark, meta } = blockMeta(j?.status, pinned, s, j);
                   const href = stopHref(s.jobId);
-                  const label = `Stop ${s.seq}, job ${j?.ref ?? ''}, ${j?.priority ?? ''}, ${clock(s.start)} to ${clock(s.end)}, ${meta}`;
+                  const label = `Stop ${s.seq}, job ${j?.ref ?? ''} · ${j?.skill ?? ''}, ${j?.priority ?? ''}, ${clock(s.start)} to ${clock(s.end)}, ${meta}`;
                   const style = { position: 'absolute', top: 8, height: 48, left: pct(s.start), width: width(s.start, s.end), minWidth: 6, boxSizing: 'border-box', borderRadius: 7, background: look.bg, color: look.fg, border: look.border, padding: '4px 6px', overflow: 'hidden', display: 'flex', flexDirection: 'column', fontSize: 12, lineHeight: 1.25, zIndex: 1 } as const;
                   const body = (
                     <>
-                      <span style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{mark ? `${mark} ` : ''}{j?.ref} · {j?.skill}</span>
+                      {/* The accessible name is the visible text plus screen-reader-only context (label-in-name, WCAG 2.5.3). */}
+                      <span style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span className="tr-sr">Stop {s.seq}, job </span>{mark ? <span aria-hidden="true">{mark} </span> : null}{j?.ref} · {j?.skill}<span className="tr-sr">, {j?.priority}, {clock(s.start)} to {clock(s.end)}, </span>
+                      </span>
                       <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta}</span>
                     </>
                   );
                   return href ? (
-                    <a key={s.jobId} href={href} className="tr-block" aria-label={label} title={label} style={style}>{body}</a>
+                    <a key={s.jobId} href={href} className="tr-block" title={label} style={style}>{body}</a>
                   ) : (
-                    <div key={s.jobId} role="img" aria-label={label} title={label} style={style}>{body}</div>
+                    <div key={s.jobId} title={label} style={style}>{body}</div>
                   );
                 })}
                 {showNow && <div aria-hidden="true" style={{ position: 'absolute', top: 0, bottom: 0, left: pct(now!), width: 2, background: C.red, zIndex: 2 }} />}
@@ -136,7 +140,7 @@ export function DayTimeline({
           {showNow ? `Red line: now, ${clock(now!)}. ` : ''}Striped bars are drive time; L is lunch. Every arrival is inside the customer’s window. Select a block to open the stop.
         </p>
       </div>
-    </div>
+    </Scroll>
   );
 }
 
@@ -160,7 +164,7 @@ export function StopsTable({ name, route, jobs, stopHref }: { name: string; rout
   const cell = { textAlign: 'left', padding: '7px 12px 7px 0', borderTop: `1px solid ${C.ruleSoft}`, verticalAlign: 'top' } as const;
   const head = { textAlign: 'left', padding: '6px 12px 6px 0', fontSize: 12, color: C.text2, whiteSpace: 'nowrap' } as const;
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <Scroll label={`Stops table for ${name} (scrolls sideways)`}>
       <table style={{ fontSize: 13, minWidth: 640, width: '100%' }}>
         <caption>Stops for {name}<span style={{ fontWeight: 400, color: C.text3 }}>{route?.lunch ? ` · lunch ${hhmm(route.lunch.start)}` : ''}{route ? ` · home ${hhmm(route.returnAt)}` : ''}</span></caption>
         <thead>
@@ -185,6 +189,6 @@ export function StopsTable({ name, route, jobs, stopHref }: { name: string; rout
           })}
         </tbody>
       </table>
-    </div>
+    </Scroll>
   );
 }

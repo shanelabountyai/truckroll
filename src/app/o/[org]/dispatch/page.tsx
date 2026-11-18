@@ -13,6 +13,7 @@ import { addJob, addTech, insertEmergency, pinJob, planDay, replanDay, unpinJob 
 import { EtaPanel, type EtaRow } from './eta-panel';
 import { PRIORITY_LOOK, PriorityTag, StatusBadge, clock, dayName, plural, wall } from './look';
 import { DayTimeline, Legend, StopsTable, type StopJob } from './timeline';
+import { Scroll } from '@/app/ui/scroll';
 
 export const metadata = { title: 'Dispatch' };
 
@@ -128,7 +129,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
             <input type="hidden" name="date" value={date} />
             <button type="submit" disabled={!jobs.length || !techs.length} style={{ ...btn.primary, minHeight: 48, fontSize: 16, padding: '0 20px' }}>Plan the day</button>
           </ActionForm>
-          <span style={{ ...help, flex: '1 1 420px' }}>
+          <span style={{ ...help, flex: '1 1 420px', minWidth: 0 }}>
             {!jobs.length || !techs.length ? `Add ${!techs.length ? 'technicians' : ''}${!techs.length && !jobs.length ? ' and ' : ''}${!jobs.length ? 'jobs for this day' : ''} below first. ` : ''}
             Pinned jobs never move: each is planned on its pinned tech, at its pinned position if it has one. If the pins can&apos;t all be kept, nothing is planned and you are told which pins to change. Jobs are scheduled only inside their window; a job no tech can reach in its window stays unassigned. Every plan is checked before it is saved.
           </span>
@@ -239,7 +240,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
       <section id="jobs" aria-labelledby="jobs-h" style={{ ...section, scrollMarginTop: 12 }}>
         <div style={sectionHead}><h2 id="jobs-h" style={{ margin: 0, fontSize: 16 }}>Jobs ({jobs.length})</h2></div>
         {jobs.length === 0 && <p style={{ margin: 0, padding: 16 }}>No jobs on this day yet. Use Add a job below.</p>}
-        <div style={{ overflowX: 'auto', padding: '0 16px 8px' }}>
+        <Scroll label="Jobs table (scrolls sideways)" style={{ padding: '0 16px 8px' }}>
           <table aria-label="Jobs" style={{ fontSize: 14, width: '100%', minWidth: 1040 }}>
             <thead>
               <tr>{['Job', 'Customer', 'Window', 'Duration', 'Skill', 'Priority', 'Status', 'Planned', 'Pin'].map((h) => <th key={h} scope="col" style={th}>{h}</th>)}</tr>
@@ -287,13 +288,13 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
               })}
             </tbody>
           </table>
-        </div>
+        </Scroll>
       </section>
 
       <section aria-labelledby="techs-h" style={section}>
         <div style={sectionHead}><h2 id="techs-h" style={{ margin: 0, fontSize: 16 }}>Technicians ({techs.length})</h2></div>
         {techs.length === 0 && <p style={{ margin: 0, padding: 16 }}>No technicians yet. Use Add a technician below.</p>}
-        <div style={{ overflowX: 'auto', padding: '0 16px 8px' }}>
+        <Scroll label="Technicians table (scrolls sideways)" style={{ padding: '0 16px 8px' }}>
           <table aria-label="Technicians" style={{ fontSize: 14, width: '100%', minWidth: 720 }}>
             <thead>
               <tr>{['Name', 'Skills', 'Shift', 'Lunch window', 'Max jobs', 'Login'].map((h) => <th key={h} scope="col" style={th}>{h}</th>)}</tr>
@@ -311,11 +312,11 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
               ))}
             </tbody>
           </table>
-        </div>
+        </Scroll>
       </section>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
-        <details style={{ ...card, flex: '1 1 420px', padding: '4px 16px' }}>
+        <details style={{ ...card, flex: '1 1 420px', minWidth: 0, padding: '4px 16px' }}>
           <summary>Add a job</summary>
           <ActionForm action={bind(addJob)}>
             <input type="hidden" name="date" value={date} />
@@ -336,7 +337,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
           </ActionForm>
         </details>
 
-        <details style={{ ...card, flex: '1 1 420px', padding: '4px 16px' }}>
+        <details style={{ ...card, flex: '1 1 420px', minWidth: 0, padding: '4px 16px' }}>
           <summary>Add a technician</summary>
           <ActionForm action={bind(addTech)}>
             <input type="hidden" name="date" value={date} />
