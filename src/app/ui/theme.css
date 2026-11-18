@@ -72,10 +72,12 @@ details[open] > summary::before { transform: rotate(90deg); }
 
 /* Focus: a visible 3 px ring on everything that takes focus; white on the navy header. */
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+/* Date and time inputs: Chromium gives their picker button no :focus-visible ring, so ring the whole field. */
+input:focus, select:focus, textarea:focus { outline: 3px solid var(--focus); outline-offset: 1px; }
 .tr-header :focus-visible, .tr-onDark :focus-visible { outline-color: #ffffff; }
 .tr-block:focus-visible { outline-offset: 1px; z-index: 3; }
 
-.tr-skip { position: absolute; left: 8px; top: -60px; z-index: 10; background: #ffffff; color: var(--blue); padding: 10px 14px; border-radius: 8px; font-weight: 700; }
+.tr-skip { position: absolute; left: 8px; top: -60px; z-index: 10; background: #ffffff; color: var(--blue); padding: 0 14px; min-height: 44px; display: inline-flex; align-items: center; border-radius: 8px; font-weight: 700; }
 .tr-skip:focus { top: 8px; }
 
 /* The shop header (Main.dc.html): wraps to two rows at phone width. */
@@ -117,3 +119,7 @@ caption { text-align: left; font-weight: 700; padding: 0 0 6px; }
 
 /* Text for screen readers only. */
 .tr-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* A refused action (ActionForm's <p role="alert">, template-owned markup): a red-edged box, not body text. */
+form > p[role='alert'] { margin: 0 0 8px; padding: 8px 12px; border: 1px solid #b42a0e; border-left-width: 4px; border-radius: 8px; background: #fff4f1; color: #8a1e08; font-weight: 600; font-size: 14px; white-space: normal; min-width: 200px; }
+form > p[role='status'] { margin: 0 0 8px; padding: 8px 12px; border: 1px solid #d5dce3; border-left: 4px solid #1f4e8a; border-radius: 8px; background: #ffffff; font-size: 14px; }

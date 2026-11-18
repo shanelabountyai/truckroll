@@ -62,7 +62,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
   const assignedTo = new Map<string, { techId: string; seq: number }>();
   for (const r of plan?.routes ?? []) for (const s of r.stops) assignedTo.set(s.jobId, { techId: r.techId, seq: s.seq });
   const reasons = new Map((plan?.unassigned ?? []).map((u) => [u.jobId, u.reasons]));
-  const scale = techs.length ? { from: Math.min(...techs.map((t) => t.shiftStart)) - 30, to: Math.max(...techs.map((t) => t.shiftEnd)) + 30 } : { from: 420, to: 1080 };
+  const scale = techs.length ? { from: Math.min(...techs.map((t) => t.shiftStart)), to: Math.max(...techs.map((t) => t.shiftEnd)) } : { from: 420, to: 1080 };
   const bind = <A extends unknown[], R>(fn: (slug: string, ...a: A) => R) => fn.bind(null, ctx.slug);
   const linked = new Set(techs.map((t) => t.userId).filter(Boolean));
   const started = jobs.filter((j) => FROZEN.includes(j.status as JobStatus)).length;
@@ -72,6 +72,11 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
   const num = (k: string) => (typeof q[k] === 'string' && /^\d{1,4}$/.test(q[k] as string) ? Number(q[k]) : null);
   const etaFlash = num('sent') !== null ? `${num('sent')} ETA text${num('sent') === 1 ? '' : 's'} approved and sent (captured, not texted).` : num('drafted') !== null ? `${num('drafted')} ETA draft${num('drafted') === 1 ? '' : 's'} ready for review. Nothing has been sent.` : null;
   const replannedAt = typeof q.replanned === 'string' && /^\d{4}$/.test(q.replanned) ? `${q.replanned.slice(0, 2)}:${q.replanned.slice(2)}` : null;
+  // Jobs added after the current plan was saved (Add a job, or an emergency whose re-plan was refused, D-45): on no
+  // route and not in the plan's unassigned list, so the plan doesn't know them yet.
+  const inPlan = new Set([...(plan?.routes ?? []).flatMap((r) => r.stops.map((s) => s.jobId)), ...(plan?.unassigned ?? []).map((u) => u.jobId)]);
+  const offPlan = plan ? jobs.filter((j) => !inPlan.has(j.id)) : [];
+  const offPlanEmergencies = offPlan.filter((j) => j.priority === 'emergency');
   const placed = plan ? plan.routes.reduce((n, r) => n + r.stops.length, 0) : 0;
   const stopHref = (jobId: string) => (stopIds.has(jobId) ? `/o/${ctx.slug}/dispatch/stops/${stopIds.get(jobId)}` : null);
 
@@ -92,15 +97,20 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
 
       {q.saved === '1' && saved && plan && <p role="status" style={notice}>Plan saved: {placed} stops, {saved.unassignedCount} unassigned.</p>}
       {replannedAt && saved && plan && saved.asOf !== null && (
-        <p role="status" style={notice}>Re-plan saved as of {replannedAt}: {placed} stops, {saved.unassignedCount} unassigned. Started jobs and pins were kept.</p>
+        <p role="status" style={notice}>Re-plan saved as of {replannedAt}: {placed} stops, {saved.unassignedCount} unassigned. Started jobs and pins were kept.{saved.unassignedCount ? ' Jobs that no longer fit are listed under Not placed.' : ''}</p>
       )}
 
-      {unplacedEmergencies.length > 0 && (
+      {(unplacedEmergencies.length > 0 || offPlanEmergencies.length > 0) && (
         <div role="alert" aria-label="Unplaced emergencies" className="tr-onDark" style={{ background: C.red, color: '#FFFFFF', borderRadius: 12, padding: '14px 18px', display: 'flex', flexWrap: 'wrap', gap: '12px 20px', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
             <span aria-hidden="true" style={{ fontSize: 22, lineHeight: 1, fontWeight: 800 }}>!</span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <strong style={{ fontSize: 17 }}>{unplacedEmergencies.length === 1 ? 'An emergency could not be placed' : `${unplacedEmergencies.length} emergencies could not be placed`}.</strong>
+              <strong style={{ fontSize: 17 }}>{unplacedEmergencies.length + offPlanEmergencies.length === 1 ? 'An emergency is not on any route' : `${unplacedEmergencies.length + offPlanEmergencies.length} emergencies are not on any route`}.</strong>
+              {offPlanEmergencies.map((j) => (
+                <span key={j.id} style={{ fontSize: 14, color: C.redTint }}>
+                  Job {j.ref} · {j.customer} (window ends {clock(j.windowEnd)}): <strong>added after this plan was saved</strong>. Re-plan to put it on a route.
+                </span>
+              ))}
               {unplacedEmergencies.map((u) => {
                 const j = jobInfo.get(u.jobId);
                 return (
@@ -109,13 +119,13 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
                   </span>
                 );
               })}
-              <span style={{ fontSize: 14, color: C.redTint }}>Pinned jobs and started work are never moved to make room (D-37). To put the emergency first, unpin a job or change its window, then re-plan.</span>
+              <span style={{ fontSize: 14, color: C.redTint }}>Pinned jobs and started work are never moved to make room. If technicians have started morning stops, have them mark those first (a stop nobody marked counts as not started), then re-plan. To put the emergency first, unpin a job or widen its window.</span>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <a href="#jobs" style={{ ...btn.primary, display: 'inline-flex', alignItems: 'center', textDecoration: 'none', background: '#FFFFFF', color: C.redDark, border: '2px solid #FFFFFF', boxSizing: 'border-box' }}>Review pins</a>
             {plan && <a href="#replan" style={{ ...btn.primary, display: 'inline-flex', alignItems: 'center', textDecoration: 'none', background: 'transparent', color: '#FFFFFF', border: '2px solid #FFFFFF', boxSizing: 'border-box' }}>Re-plan</a>}
-            {unplacedEmergencies.map((u) => jobById.get(u.jobId)?.customerPhone).filter(Boolean).slice(0, 1).map((phone) => (
+            {[...unplacedEmergencies.map((u) => jobById.get(u.jobId)?.customerPhone), ...offPlanEmergencies.map((j) => j.customerPhone)].filter(Boolean).slice(0, 1).map((phone) => (
               <a key={phone} href={`tel:${phone}`} style={{ ...btn.primary, display: 'inline-flex', alignItems: 'center', textDecoration: 'none', background: 'transparent', color: '#FFFFFF', border: '2px solid #FFFFFF', boxSizing: 'border-box' }}>Call customer</a>
             ))}
           </div>
@@ -127,11 +137,11 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
           <h2 id="plan-day" style={{ margin: 0, fontSize: 16, flexBasis: '100%' }}>{plan ? 'Plan the day again' : 'Plan the day'}</h2>
           <ActionForm action={bind(planDay)}>
             <input type="hidden" name="date" value={date} />
-            <button type="submit" disabled={!jobs.length || !techs.length} style={{ ...btn.primary, minHeight: 48, fontSize: 16, padding: '0 20px' }}>Plan the day</button>
+            <button type="submit" disabled={!jobs.length || !techs.length} style={{ ...btn.primary, minHeight: 48, fontSize: 16, padding: '0 20px' }}>{plan ? 'Plan the day again' : 'Plan the day'}</button>
           </ActionForm>
           <span style={{ ...help, flex: '1 1 420px', minWidth: 0 }}>
             {!jobs.length || !techs.length ? `Add ${!techs.length ? 'technicians' : ''}${!techs.length && !jobs.length ? ' and ' : ''}${!jobs.length ? 'jobs for this day' : ''} below first. ` : ''}
-            Pinned jobs never move: each is planned on its pinned tech, at its pinned position if it has one. If the pins can&apos;t all be kept, nothing is planned and you are told which pins to change. Jobs are scheduled only inside their window; a job no tech can reach in its window stays unassigned. Every plan is checked before it is saved.
+            {plan ? 'This replaces the current plan from scratch; nothing has started yet. ' : ''}Pinned jobs never move: each is planned on its pinned tech, at its pinned position if it has one. If the pins can&apos;t all be kept, nothing is planned and you are told which pins to change. Jobs are scheduled only inside their window; a job no tech can reach in its window stays unassigned. Every plan is checked before it is saved.
           </span>
         </section>
       ) : (
@@ -144,11 +154,11 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
         <section aria-labelledby="tl" style={{ ...section, flex: '999 1 820px', minWidth: 0 }}>
           <div style={sectionHead}>
             <h2 id="tl" style={{ margin: 0, fontSize: 19 }}>{dayName(date)} · {plural(techs.length, 'tech')} · {placed} jobs placed</h2>
-            <Legend />
+            {plan && <Legend />}
           </div>
           {!plan && <p style={{ margin: 0, padding: 16 }}>No plan saved for this day yet.</p>}
           {plan && metrics && (
-            <p aria-label="Plan summary" style={{ margin: 0, padding: '10px 16px 0', fontSize: 14, color: C.text2 }}>
+            <p role="group" aria-label="Plan summary" style={{ margin: 0, padding: '10px 16px 0', fontSize: 14, color: C.text2 }}>
               {saved!.asOf !== null ? `Re-plan as of ${hhmm(saved!.asOf)} · ` : ''}Saved {wall(saved!.createdAt)} · on time {metrics.onTimePct}% · drive {metrics.driveMin} min · utilization {metrics.utilizationPct}% ·{' '}
               <strong style={{ color: plan.unassigned.length ? C.red : C.ink }}>{plan.unassigned.length} unassigned</strong>
             </p>
@@ -159,8 +169,21 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
         <aside aria-label="Needs attention" style={{ flex: '1 1 320px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
           {plan && (
             <section aria-labelledby="unplaced" style={{ ...cardPad, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <h2 id="unplaced" style={{ margin: 0, fontSize: 16 }}>Not placed ({plan.unassigned.length})</h2>
-              {plan.unassigned.length === 0 && <p style={{ margin: '6px 0 0', ...help }}>Every job of the day is on a route.</p>}
+              <h2 id="unplaced" style={{ margin: 0, fontSize: 16 }}>Not placed ({plan.unassigned.length + offPlan.length})</h2>
+              {offPlan.length > 0 && (
+                <ul aria-label="Jobs added after this plan" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  {offPlan.map((j) => (
+                    <li key={j.id} style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '10px 0', borderTop: `1px solid ${C.ruleSoft}` }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ fontWeight: 600 }}>Job {j.ref} · {j.skill}</span>
+                        <PriorityTag priority={j.priority} />
+                      </div>
+                      <span style={{ fontSize: 13, color: C.text2 }}>Added after this plan was saved. Window {clock(j.windowStart)}–{clock(j.windowEnd)}. {started ? 'Re-plan' : 'Plan the day again'} to place it.</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {plan.unassigned.length === 0 && offPlan.length === 0 && <p style={{ margin: '6px 0 0', ...help }}>Every job of the day is on a route.</p>}
               {plan.unassigned.length > 0 && (
                 <ul aria-label="Unassigned jobs" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                   {plan.unassigned.map((u) => {
@@ -208,9 +231,9 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
             <ActionForm action={bind(insertEmergency)}>
               <input type="hidden" name="date" value={date} />
               <div style={fieldGrid}>
-                <label style={field}>Re-plan from <input name="asOf" type="time" required defaultValue={asOfDefault} aria-label="Emergency re-plan time" style={input} /></label>
+                <label style={field}>Re-plan from <input name="asOf" type="time" required defaultValue={asOfDefault} aria-label="Re-plan from (Emergency re-plan time)" style={input} /></label>
                 <label style={field}>Window end <input name="windowEnd" type="time" required defaultValue="14:00" aria-label="Emergency window end" style={input} /></label>
-                <label style={field}>Duration (min) <input name="durationMin" type="number" min={1} max={720} required defaultValue={60} aria-label="Emergency duration" style={input} /></label>
+                <label style={field}>Duration (min) <input name="durationMin" type="number" min={1} max={720} required defaultValue={60} aria-label="Duration (min) (Emergency duration)" style={input} /></label>
                 <label style={field}>Job number <input name="ref" required maxLength={32} aria-label="Emergency job number" style={input} /></label>
                 <label style={field}>Customer <input name="customer" required maxLength={120} aria-label="Emergency customer" style={input} /></label>
                 <label style={field}>Address <input name="address" required maxLength={200} aria-label="Emergency address" style={input} /></label>
@@ -273,7 +296,7 @@ export default async function DispatchBoard({ params, searchParams }: { params: 
                         <ActionForm action={bind(pinJob)}>
                           <input type="hidden" name="id" value={j.id} />
                           <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                            <select name="techId" aria-label={`Pin ${j.ref} to`} defaultValue="" style={input}>
+                            <select name="techId" required aria-label={`Pin ${j.ref} to`} defaultValue="" style={input}>
                               <option value="" disabled>Tech…</option>
                               {techs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>

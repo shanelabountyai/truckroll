@@ -46,24 +46,18 @@ export function EtaPanel({ slug, date, rows, aiConfigured, flash }: { slug: stri
 
       {drafts.length > 0 && (
         <>
-          {sendable.length > 0 && (
-            <ActionForm action={bind(approveEtas)}>
-              {sendable.map((r) => <input key={r.id} type="hidden" name="ids[]" value={r.id} />)}
-              <button type="submit" style={btn.primary}>Approve and send all {sendable.length}</button>
-            </ActionForm>
-          )}
           <ul aria-label="ETA drafts" style={list}>
             {drafts.map((r) => (
               <li key={r.id} aria-label={`ETA draft ${r.jobRef}`} style={item}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 13, flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 600 }}>To: {r.customer} · Job {r.jobRef}</span>
-                  <span style={{ color: C.amberMid, fontWeight: 700 }}><span aria-hidden="true">◐ </span>Draft</span>
+                  <span style={{ color: C.amberMid, fontWeight: 700 }}><span aria-hidden="true">✎ </span>Draft</span>
                 </div>
                 <div style={{ fontSize: 13, color: C.text2 }}>
                   {r.phone ?? <em>no phone number</em>} · {r.source === 'llm' ? 'drafted by Claude' : 'template'}{r.editedAt ? ', edited' : ''}
                 </div>
                 {r.fallbackReason && <p style={{ margin: 0, fontSize: 13, color: C.text2 }}>{r.fallbackReason}</p>}
-                <p style={textBox} aria-label={`ETA text for ${r.jobRef}`}>{r.body}</p>
+                <p role="group" style={textBox} aria-label={`ETA text for ${r.jobRef}`}>{r.body}</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
                   {r.phone ? (
                     <ActionForm action={bind(approveEtas)}>
@@ -89,6 +83,15 @@ export function EtaPanel({ slug, date, rows, aiConfigured, flash }: { slug: stri
               </li>
             ))}
           </ul>
+          {sendable.length > 0 && (
+            <ActionForm action={bind(approveEtas)}>
+              {sendable.map((r) => <input key={r.id} type="hidden" name="ids[]" value={r.id} />)}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, borderTop: `1px solid ${C.ruleSoft}`, paddingTop: 10 }}>
+                <span style={{ fontSize: 13, color: C.text2 }}>Read every draft above first: this approves and sends all of them that have a phone number.</span>
+                <button type="submit" style={{ ...btn.secondary, alignSelf: 'flex-start' }}>Approve and send all {sendable.length}</button>
+              </div>
+            </ActionForm>
+          )}
         </>
       )}
 

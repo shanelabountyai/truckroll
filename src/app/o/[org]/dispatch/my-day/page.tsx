@@ -24,9 +24,9 @@ export default async function MyDay({ params, searchParams }: { params: Promise<
   const stopHref = (id: string) => `/o/${ctx.slug}/dispatch/stops/${id}`;
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, fontSize: 16 }}>
-      <div className="tr-onDark" style={{ background: C.ink, color: '#FFFFFF', padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, borderTop: '1px solid #2A3A48' }}>
+      <div style={{ background: C.card, color: C.ink, borderBottom: `1px solid ${C.cardEdge}`, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <h1 style={{ margin: 0, fontSize: 17 }}>{tech ? `${tech.name} · ` : 'My day · '}{dayName(date, true)}</h1>
-        {tech && <span style={{ fontSize: 14, color: C.headLink }}>{plural(stops.length, 'stop')}</span>}
+        {tech && <span style={{ fontSize: 14, color: C.text2 }}>{plural(stops.length, 'stop')}</span>}
       </div>
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <form method="get" style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -40,7 +40,7 @@ export default async function MyDay({ params, searchParams }: { params: Promise<
         {tech && planId && stops.length === 0 && <Notice>No stops for you on this day.</Notice>}
         {tech && stops.length > 0 && (
           <>
-            <p aria-label="Day summary" style={{ margin: 0, fontSize: 14, color: C.text2 }}>
+            <p role="group" aria-label="Day summary" style={{ margin: 0, fontSize: 14, color: C.text2 }}>
               {tech.name} · {plural(stops.length, 'stop')} · {doneCount} finished{now && now !== stops[0] ? <> · <a href="#now">Jump to the current stop</a></> : null}
             </p>
             <ol aria-label={`Stops for ${tech.name}`} style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -63,10 +63,12 @@ export default async function MyDay({ params, searchParams }: { params: Promise<
                         {s.job.customerPhone && <a href={`tel:${s.job.customerPhone}`} style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, fontWeight: 600 }}>Call {s.job.customerPhone}</a>}
                       </div>
                       <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, fontSize: 14 }}>
-                        <Fact label="Planned arrival" value={clock(s.arrival)} />
+                        <Fact label="Work starts" value={clock(s.start)} />
                         <Fact label="Customer window" value={`${clock(s.job.windowStart)}–${clock(s.job.windowEnd)}`} />
+                        <Fact label="You arrive" value={clock(s.arrival)} />
+                        <Fact label="Wait before start" value={minutes(s.slackMin)} />
                         <Fact label="Drive" value={minutes(s.driveMin)} />
-                        <Fact label="Slack" value={minutes(s.slackMin)} />
+                        <Fact label="Estimate" value={minutes(s.job.durationMin)} />
                       </dl>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <StatusBadge status={st} />

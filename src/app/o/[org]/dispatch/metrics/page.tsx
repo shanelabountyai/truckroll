@@ -65,6 +65,7 @@ export default async function DispatchMetrics({ params, searchParams }: { params
     const arrived = rows.filter((x) => x.inWindow !== null);
     return { techId: r.techId, stops: r.stops.length, drive: r.stops.reduce((n, s) => n + s.driveMin, 0) + r.returnDriveMin, arrived: arrived.length, inWindow: arrived.filter((x) => x.inWindow).length };
   }).sort((a, b) => (techName.get(a.techId) ?? '').localeCompare(techName.get(b.techId) ?? ''));
+  const offPlan = plan ? jobs.filter((j) => !routed.has(j.id) && !plan.unassigned.some((u) => u.jobId === j.id)).length : 0;
   const maxReason = metrics ? Math.max(1, ...REASONS.map((r) => metrics.unassignedByReason[r] ?? 0)) : 1;
   const topReason = metrics && metrics.unassigned > 0 ? REASONS.reduce((a, b) => ((metrics.unassignedByReason[b] ?? 0) > (metrics.unassignedByReason[a] ?? 0) ? b : a)) : null;
 
@@ -92,31 +93,31 @@ export default async function DispatchMetrics({ params, searchParams }: { params
         <section aria-label="Current plan" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <h2 style={{ margin: 0, fontSize: 17 }}>Current plan {current.asOf !== null ? `(re-plan as of ${hhmm(current.asOf)})` : ''}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
-            <div style={kpi} aria-label="Planned on time">
-              <span style={kpiLabel}>Planned on time</span>
-              <span style={kpiValue}>{metrics.onTimePct}%</span>
-              <span style={kpiNote}>Stops planned to start inside the customer window</span>
+            <div role="group" style={kpi} aria-label="Arrived on time">
+              <span style={kpiLabel}>Arrived on time</span>
+              <span style={kpiValue}>{pva && pva.arrived ? `${pva.actualOnTimePct}%` : '—'}</span>
+              <span style={kpiNote}>{pva && pva.arrived ? `On site inside the customer window, ${pva.arrived} recorded arrival${pva.arrived === 1 ? '' : 's'}` : 'Shows once technicians record on-site times'}. Planned: {metrics.onTimePct}%</span>
             </div>
-            <div style={kpi} aria-label="Drive minutes">
+            <div role="group" style={kpi} aria-label="Drive minutes">
               <span style={kpiLabel}>Drive minutes</span>
               <span style={kpiValue}>{metrics.driveMin}</span>
               <span style={kpiNote}>Solver plan, drive home included, across {metrics.techsUsed} tech{metrics.techsUsed === 1 ? '' : 's'}</span>
             </div>
-            <div style={kpi} aria-label="Utilization">
+            <div role="group" style={kpi} aria-label="Utilization">
               <span style={kpiLabel}>Utilization</span>
               <span style={kpiValue}>{metrics.utilizationPct}%</span>
               <span style={kpiNote}>Job and drive minutes ÷ shift minutes of techs with stops</span>
             </div>
-            <div style={kpi} aria-label="Emergencies placed">
+            <div role="group" style={kpi} aria-label="Emergencies placed">
               <span style={kpiLabel}>Emergencies placed</span>
               <span style={kpiValue}>{placedEmergencies} of {emergencies.length}</span>
               <span style={kpiNote}>{emergencies.length ? 'Emergency jobs of the day on a route' : 'No emergency jobs on this day'}</span>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <div style={small} aria-label="Stops"><span style={kpiLabel}>Stops</span><span><strong style={{ fontSize: 20 }}>{metrics.assigned}</strong> on {metrics.techsUsed} tech{metrics.techsUsed === 1 ? '' : 's'}</span></div>
-            <div style={small} aria-label="Unassigned"><span style={kpiLabel}>Unassigned</span><span><strong style={{ fontSize: 20 }}>{metrics.unassigned}</strong></span></div>
-            <div style={small} aria-label="ETA texts"><span style={kpiLabel}>ETA texts</span><span><strong style={{ fontSize: 20 }}>{etaCount('sent')}</strong> sent · {etaCount('draft')} draft</span></div>
+            <div role="group" style={small} aria-label="Stops"><span style={kpiLabel}>Stops</span><span><strong style={{ fontSize: 20 }}>{metrics.assigned}</strong> on {metrics.techsUsed} tech{metrics.techsUsed === 1 ? '' : 's'}</span></div>
+            <div role="group" style={small} aria-label="Unassigned"><span style={kpiLabel}>Unassigned</span><span><strong style={{ fontSize: 20 }}>{metrics.unassigned}</strong>{offPlan ? ` · ${offPlan} added after this plan` : ''}</span></div>
+            <div role="group" style={small} aria-label="ETA texts"><span style={kpiLabel}>ETA texts</span><span><strong style={{ fontSize: 20 }}>{etaCount('sent')}</strong> sent · {etaCount('draft')} draft</span></div>
           </div>
         </section>
       )}
@@ -176,11 +177,11 @@ export default async function DispatchMetrics({ params, searchParams }: { params
             <p style={{ margin: 0 }}>No technician has recorded a status on this plan yet. Actual times appear here as stops are marked en route, on site and done.</p>
           ) : (
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <div style={small} aria-label="Started"><span style={kpiLabel}>Started</span><span><strong style={{ fontSize: 20 }}>{pva.started}</strong> of {pva.stops}</span></div>
-              <div style={small} aria-label="Done"><span style={kpiLabel}>Done</span><span><strong style={{ fontSize: 20 }}>{pva.done}</strong>{pva.cantComplete ? ` · ${pva.cantComplete} can’t complete` : ''}</span></div>
-              <div style={small} aria-label="Arrived in window"><span style={kpiLabel}>Arrived in window</span><span><strong style={{ fontSize: 20 }}>{pct(pva.actualOnTimePct)}</strong> of {pva.arrived}</span></div>
-              <div style={small} aria-label="Average start vs plan"><span style={kpiLabel}>Average start vs plan</span><strong style={{ fontSize: 20 }}>{signed(pva.avgStartDeltaMin)}</strong></div>
-              <div style={small} aria-label="Average job length vs estimate"><span style={kpiLabel}>Average job length vs estimate</span><strong style={{ fontSize: 20 }}>{signed(pva.avgDurationDeltaMin)}</strong></div>
+              <div role="group" style={small} aria-label="Started"><span style={kpiLabel}>Started</span><span><strong style={{ fontSize: 20 }}>{pva.started}</strong> of {pva.stops}</span></div>
+              <div role="group" style={small} aria-label="Done"><span style={kpiLabel}>Done</span><span><strong style={{ fontSize: 20 }}>{pva.done}</strong>{pva.cantComplete ? ` · ${pva.cantComplete} can’t complete` : ''}</span></div>
+              <div role="group" style={small} aria-label="Arrived in window"><span style={kpiLabel}>Arrived in window</span><span><strong style={{ fontSize: 20 }}>{pct(pva.actualOnTimePct)}</strong> of {pva.arrived}</span></div>
+              <div role="group" style={small} aria-label="Average start vs plan"><span style={kpiLabel}>Average start vs plan</span><strong style={{ fontSize: 20 }}>{signed(pva.avgStartDeltaMin)}</strong></div>
+              <div role="group" style={small} aria-label="Average job length vs estimate"><span style={kpiLabel}>Average job length vs estimate</span><strong style={{ fontSize: 20 }}>{signed(pva.avgDurationDeltaMin)}</strong></div>
             </div>
           )}
           <Scroll label="Stops table (scrolls sideways)">

@@ -43,9 +43,9 @@ export function StatusButtons({ slug, jobId, jobRef, status, back }: { slug: str
             <input type="hidden" name="back" value={back} />
             <label style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '10px 0 8px', fontSize: 14, fontWeight: 600 }}>
               Why? (the office reads this)
-              <input name="note" required maxLength={500} style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '0 10px' }} aria-label={`Why job ${jobRef} can’t be completed`} />
+              <input name="note" required maxLength={500} style={{ width: '100%', boxSizing: 'border-box', fontSize: 16, padding: '0 10px' }} aria-label={`Why? (the office reads this) Job ${jobRef}`} />
             </label>
-            <button type="submit" style={{ ...caution, minHeight: 48, width: 'auto', padding: '0 18px' }} aria-label={`Can’t complete: job ${jobRef}`}>Mark can’t complete</button>
+            <button type="submit" style={{ ...caution, minHeight: 48, width: 'auto', padding: '0 18px' }} aria-label={`Mark can’t complete: job ${jobRef}`}>Mark can’t complete</button>
           </ActionForm>
         </details>
       )}

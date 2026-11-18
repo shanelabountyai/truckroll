@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { requireOrg } from '@/core/authz/guards';
-import type { JobStatus } from '@/lib/dispatch/replan';
+import { NEXT_STATUS, type JobStatus } from '@/lib/dispatch/replan';
 import { isDispatcher } from '@/lib/dispatch/roles';
 import { readStop } from '@/lib/dispatch/tech-day';
 import { isoDay } from '@/lib/dispatch/time';
@@ -24,11 +24,11 @@ export default async function StopPage({ params }: { params: Promise<{ org: stri
   const emergency = s.job.priority === 'emergency';
   return (
     <main style={{ maxWidth: 480, margin: '0 auto', padding: 0, fontSize: 16 }}>
-      <div className="tr-onDark" style={{ background: C.ink, color: '#FFFFFF', padding: '4px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, borderTop: '1px solid #2A3A48' }}>
-        <Link href={back} style={{ color: '#FFFFFF', fontWeight: 600, textDecoration: 'none', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ background: C.card, color: C.ink, borderBottom: `1px solid ${C.cardEdge}`, padding: '4px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+        <Link href={back} style={{ color: C.blue, fontWeight: 600, textDecoration: 'none', minHeight: 44, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span aria-hidden="true">←</span> {dispatcher ? 'Back to the board' : 'Back to my day'}
         </Link>
-        <span style={{ fontSize: 14, color: C.headLink }}>{s.tech.name} · {dayName(day, true)}</span>
+        <span style={{ fontSize: 14, color: C.text2 }}>{s.tech.name} · {dayName(day, true)}</span>
       </div>
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <section aria-labelledby="stop-title" style={{ background: C.card, border: `2px solid ${emergency ? C.red : C.blue}`, borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -45,19 +45,20 @@ export default async function StopPage({ params }: { params: Promise<{ org: stri
           </div>
           <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, fontSize: 14 }}>
             <Fact label="Technician" value={`${s.tech.name}, stop ${s.seq}`} />
-            <Fact label="Planned arrival" value={clock(s.arrival)} />
-            <Fact label="Customer window" value={`${clock(s.job.windowStart)}–${clock(s.job.windowEnd)}`} />
             <Fact label="Work" value={`${clock(s.start)}–${clock(s.end)}`} />
+            <Fact label="Customer window" value={`${clock(s.job.windowStart)}–${clock(s.job.windowEnd)}`} />
+            <Fact label="Arrive" value={clock(s.arrival)} />
+            <Fact label="Wait before start" value={minutes(s.slackMin)} />
             <Fact label="Drive" value={minutes(s.driveMin)} />
-            <Fact label="Slack" value={minutes(s.slackMin)} />
             <Fact label="Estimate" value={minutes(s.job.durationMin)} />
-            <Fact label="Priority" value={s.job.priority} />
           </dl>
           {s.job.statusNote && <p style={{ margin: 0, fontSize: 14 }}><strong>Note:</strong> {s.job.statusNote}</p>}
           {s.current ? (
             <>
               <StatusButtons slug={ctx.slug} jobId={s.job.id} jobRef={s.job.ref} status={status} back="stop" />
-              <span style={{ fontSize: 13, color: C.text3 }}>Only the next allowed moves are shown. Can’t complete asks for a short note first.</span>
+              {NEXT_STATUS[status].length > 0 && (
+                <span style={{ fontSize: 13, color: C.text3 }}>Only the next allowed moves are shown.{NEXT_STATUS[status].includes('cant_complete') ? ' Can’t complete asks for a short note first.' : ''}</span>
+              )}
             </>
           ) : (
             <p style={{ margin: 0, fontSize: 14 }}>This stop is from an earlier plan; open the day’s current plan to update it.</p>

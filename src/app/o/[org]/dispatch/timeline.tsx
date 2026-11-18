@@ -36,9 +36,9 @@ function blockMeta(status: string | undefined, pinned: boolean, s: Route['stops'
   if (status === 'done') return { mark: '✓', meta: j?.doneAt ? `Done ${wall(j.doneAt)}` : 'Done' };
   if (status === 'cant_complete') return { mark: '✕', meta: 'Can’t complete' };
   if (status === 'on_site') return { mark: '●', meta: 'On site · locked' };
-  if (status === 'en_route') return { mark: '→', meta: `En route · arr ${clock(s.arrival)}` };
-  const slack = s.slackMin ? ` · slack ${s.slackMin}m` : '';
-  return { mark: pinned ? 'PIN' : '', meta: `${pinned ? 'Pinned · ' : ''}Arr ${clock(s.arrival)}${slack}` };
+  if (status === 'en_route') return { mark: '→', meta: `En route · starts ${clock(s.start)}` };
+  // The start is the promise (inside the window, D-36); a tech who arrives earlier waits (slack).
+  return { mark: pinned ? 'PIN' : '', meta: `Starts ${clock(s.start)}${pinned ? ' · pinned' : ''}` };
 }
 
 export function DayTimeline({
@@ -67,8 +67,8 @@ export function DayTimeline({
   const showNow = now !== null && now >= from && now <= to;
   return (
     <Scroll label="Timeline (scrolls sideways)">
-      <div style={{ minWidth: 760, padding: '8px 16px 16px' }}>
-        <div aria-hidden="true" style={{ display: 'grid', gridTemplateColumns: '140px 1fr' }}>
+      <div style={{ minWidth: 900, padding: '8px 16px 16px' }}>
+        <div aria-hidden="true" style={{ display: 'grid', gridTemplateColumns: '120px 1fr' }}>
           <span />
           <div style={{ position: 'relative', height: 22, fontSize: 12, color: C.text3 }}>
             {hours.map((h) => (
@@ -82,18 +82,12 @@ export function DayTimeline({
           const route = routes.find((r) => r.techId === t.id) ?? null;
           const stops = route?.stops ?? [];
           return (
-            <section key={t.id} aria-label={`Route for ${t.name}`} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', alignItems: 'center', borderTop: `1px solid ${C.ruleSoft}` }}>
+            <section key={t.id} aria-label={`Route for ${t.name}`} style={{ display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center', borderTop: `1px solid ${C.ruleSoft}` }}>
               <div style={{ display: 'flex', flexDirection: 'column', padding: '10px 8px 10px 0', minWidth: 0 }}>
                 <span style={{ fontWeight: 700 }}>{t.name}</span>
-                <span style={{ fontSize: 12, color: C.text3 }}>
-                  {stops.length} stop{stops.length === 1 ? '' : 's'}{route?.lunch ? ` · lunch ${clock(route.lunch.start)}` : ''}
-                </span>
-                <span style={{ fontSize: 12, color: C.text3 }}>{t.skills.join(' · ')}</span>
+                <span style={{ fontSize: 12, color: C.text3 }}>{stops.length} stop{stops.length === 1 ? '' : 's'} · {hhmm(t.shiftStart)}–{hhmm(t.shiftEnd)}</span>
               </div>
               <div style={{ position: 'relative', height: 64, background: hourLine }}>
-                {/* Off shift: the hours outside this tech's shift, shaded. */}
-                <div aria-hidden="true" style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: width(from, t.shiftStart), background: C.page }} />
-                <div aria-hidden="true" style={{ position: 'absolute', top: 0, bottom: 0, left: pct(t.shiftEnd), right: 0, background: C.page }} />
                 {stops.map((s) =>
                   s.driveMin > 0 ? (
                     <div key={`d-${s.jobId}`} aria-hidden="true" title={`Drive ${s.driveMin} min`} style={{ position: 'absolute', top: 26, height: 12, left: pct(s.arrival - s.driveMin), width: width(s.arrival - s.driveMin, s.arrival), background: `repeating-linear-gradient(135deg, ${C.greyEdge} 0 3px, transparent 3px 6px)`, borderRadius: 3 }} />
@@ -120,7 +114,7 @@ export function DayTimeline({
                     <>
                       {/* The accessible name is the visible text plus screen-reader-only context (label-in-name, WCAG 2.5.3). */}
                       <span style={{ fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span className="tr-sr">Stop {s.seq}, job </span>{mark ? <span aria-hidden="true">{mark} </span> : null}{j?.ref} · {j?.skill}<span className="tr-sr">, {j?.priority}, {clock(s.start)} to {clock(s.end)}, </span>
+                        <span className="tr-sr">Stop {s.seq}, job </span>{j?.priority === 'emergency' ? <span aria-hidden="true">! </span> : null}{mark ? <span aria-hidden="true">{mark} </span> : null}{j?.ref} · {j?.skill}<span className="tr-sr">, {j?.priority}, {clock(s.start)} to {clock(s.end)}, </span>
                       </span>
                       <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{meta}</span>
                     </>
@@ -137,7 +131,7 @@ export function DayTimeline({
           );
         })}
         <p style={{ margin: '10px 0 0', fontSize: 12, color: C.text3 }}>
-          {showNow ? `Red line: now, ${clock(now!)}. ` : ''}Striped bars are drive time; L is lunch. Every arrival is inside the customer’s window. Select a block to open the stop.
+          {showNow ? `Red line: now, ${clock(now!)}. ` : ''}Striped bars are drive time; L is lunch; ! marks an emergency. Every job starts inside the customer’s window (a tech who gets there early waits). Select a block to open the stop.
         </p>
       </div>
     </Scroll>
@@ -152,7 +146,7 @@ export function Legend() {
       <li>{sw(C.blue, `1px solid ${C.blueDark}`)}Standard</li>
       <li>{sw(C.grey, `1px solid ${C.greyEdge}`)}Maintenance</li>
       <li><strong>PIN</strong> Pinned (never moved)</li>
-      <li><span aria-hidden="true">✓ ● →</span> Done / on site / en route (locked)</li>
+      <li><span aria-hidden="true">✓ ● →</span> Done / on site / en route (kept in a re-plan)</li>
     </ul>
   );
 }
