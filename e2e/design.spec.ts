@@ -78,6 +78,33 @@ test('the dispatcher board, planned today: axe, keyboard, targets, timeline bloc
   await page.keyboard.press('Enter');
   await expect(page.getByRole('heading', { name: new RegExp(`Job ${job}`) })).toBeVisible();
 
+  // Review findings A-1/UX-M5: an emergency block carries a visible "!", and blocks say when work starts, not "Arr".
+  await page.goto(`/o/acme/dispatch?date=${TODAY}`);
+  const emergencyRef = (await page.getByRole('row', { name: /^Job J/ }).filter({ hasText: 'emergency' }).first().getAttribute('aria-label'))!.replace('Job ', '');
+  const emergencyBlock = page.getByRole('region', { name: /^Route for / }).getByRole('link', { name: new RegExp(`job ${emergencyRef} `) });
+  await expect(emergencyBlock).toContainText('!');
+  await expect(emergencyBlock).toContainText('Starts ');
+
+  // Every disclosure open (Emergency insert, Add a job, Add a technician) still passes axe.
+  for (const name of ['Emergency insert', 'Add a job', 'Add a technician']) await page.locator('summary', { hasText: name }).click();
+  await axe(page, 'board, every disclosure open');
+
+  // UX-M3: a job added after the plan was saved is not silently missing — Not placed lists it, an emergency raises the banner.
+  const add = page.locator('details', { has: page.locator('summary', { hasText: 'Add a job' }) });
+  await add.getByLabel('Job number').fill('LATE1');
+  await add.getByLabel('Customer').fill('Customer Late');
+  await add.getByLabel('Address').fill('1 Example Rd, Synthetic OK');
+  await add.getByLabel('Latitude').fill('35.76');
+  await add.getByLabel('Longitude').fill('-95.36');
+  await add.getByLabel('Window start').fill('13:00');
+  await add.getByLabel('Window end').fill('17:00');
+  await add.getByLabel('Priority').selectOption('emergency');
+  await add.getByRole('button', { name: 'Add job' }).click();
+  await expect(page.getByRole('list', { name: 'Jobs added after this plan' })).toContainText('Job LATE1');
+  await expect(page.getByLabel('Unplaced emergencies')).toContainText('Job LATE1');
+  await expect(page.getByLabel('Unplaced emergencies')).toContainText('added after this plan was saved');
+  await axe(page, 'board, emergency added after the plan');
+
   // Under a dark OS setting the app stays on its light theme (D-66) and still passes.
   await page.emulateMedia({ colorScheme: 'dark' });
   await page.goto(`/o/acme/dispatch?date=${TODAY}`);
@@ -116,6 +143,14 @@ test('the technician’s day and stop page at 390 px: the current stop is the bi
   await page.emulateMedia({ colorScheme: 'dark' });
   await axe(page, 'my day, dark OS setting');
   await page.emulateMedia({ colorScheme: 'light' });
+
+  // A-2: with Can't complete open, the note field and button are named by their visible text.
+  await current.getByRole('button', { name: /^En route: job / }).click();
+  await expect(current).toContainText('en route');
+  await current.locator('summary', { hasText: 'Can’t complete' }).click();
+  await expect(current.getByRole('button', { name: /^Mark can’t complete: job / })).toBeVisible();
+  await expect(current.getByLabel(/^Why\? \(the office reads this\)/)).toBeVisible();
+  await axe(page, 'my day, Can’t complete open');
 
   // Another stop is a row that opens its stop page, which has the buttons when the stop is on the current plan.
   const others = list.locator('li:not([aria-current])');
