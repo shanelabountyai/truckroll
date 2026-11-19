@@ -6,6 +6,9 @@ const PORT = Number(process.env.PORT ?? 7800);
 export default defineConfig({
   testDir: 'e2e',
   fullyParallel: false,
+  // One worker: demo, design, dispatch and security-pages each reseed the shared test database in beforeAll, so a second
+  // worker can delete jobs another file is planning on (PlanStop_jobId_fkey, CI run 44413137111). D-74.
+  workers: 1,
   reporter: 'list',
   use: { baseURL: `http://localhost:${PORT}` },
   webServer: {
