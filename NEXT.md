@@ -1,5 +1,25 @@
 # NEXT
 
+## ▶ 2026-11-24: Truckroll portfolio pack (branch `portfolio-pack/2026-11-24`, one draft PR, docs only, not merged)
+**Not deployed.** A closeout pack for the portfolio, minus live verification. The 2026-11-23 attempt left only the brief
+doc; why it stopped is unknown. Judgment calls: D-75 to D-80.
+- **Done:** `docs/DEMO.md` (At a glance + 18 stops, D-77), exec brief "Truckroll in Brief" kept and corrected in place
+  (https://claude.ai/artifact/BQK2vDLSmEgLCGix4d97bo, private, D-80), `docs/LINKEDIN_DRAFTS.md` (two drafts on D-32 and
+  D-36, drafted, unposted, D-78), cost note D-79, `docs/RELEASE_NOTES.md` ("Not deployed" entry). No code, test, seed,
+  schema, config or CI change.
+- **Verified here (cloud sandbox, 2 CPUs), with exit codes:** `npm ci` 0 (Prisma engine download blocked, D-12 stub via
+  env, nothing committed); `npm run lint` 0 (0 errors, 1 warning, `src/app/org-hooks.ts`); `npm run typecheck` 0;
+  `npm run build` 0 (CI's placeholder env); solver `pytest -q` 0 (135 passed); solver vitest subset (CI's `solver` job
+  list) 0 (7 files, 149 tests passed); `bench.py 20` 0 (worst p95 44 ms, limit 2,000 ms, 18 synthetic fixtures).
+  Merge commits in RELEASE_NOTES checked with `git log`; CI on `main` `aa4897e` green (run 44571003644).
+- **Not verified here:** `npm test` exited 1: 48 of 65 files failed at import for want of `DATABASE_URL`/`.env.test`
+  (287 passed, 91 skipped; not a code result). `npm run test:e2e` not run. Both need Postgres, which this sandbox could
+  not start (D-76); the PR's CI is the gate. No demo stop clicked through by hand; no live Claude ETA text ever run.
+- **Doc fixes that would need code (not done):** none found.
+- **You:** (1) review the draft PR and its CI; (2) click through `docs/DEMO.md` and mark stops 12, 13, 17; (3) read the
+  brief; (4) edit the LinkedIn drafts before posting; (5) decide whether to deploy (a pilot needs D-05 real SMS, D-01
+  road times, D-59 shop names).
+
 ## ▶ 2026-11-18: Truckroll design pass (branch `design/impl`, one PR, not merged)
 Built from the Claude Design canvas exported in `docs/design/` (run instructions `docs/design/RUN.md`):
 - **Built:** shop header + footer (all org pages), dispatch board (Main + gap BoardTools), My day (MyDay), stop page (gap
