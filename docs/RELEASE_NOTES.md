@@ -26,7 +26,7 @@ CI on `main` at `aa4897e`: success ([run 44571003644](https://github.com/shanela
 
 ### The pack
 
-Branch `portfolio-pack/2026-11-24`, one draft PR, docs only (no application code, tests, seeds, schema, config or CI
+Branch `portfolio-pack/2026-11-24`, PR #10, merged 2026-11-24 as `e15be14` (CI green on `main`, run 45509963486), docs only (no application code, tests, seeds, schema, config or CI
 changed).
 
 | Item | Where | State |

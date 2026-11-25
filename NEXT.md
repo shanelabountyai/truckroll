@@ -1,6 +1,6 @@
 # NEXT
 
-## ▶ 2026-11-24: Truckroll portfolio pack (branch `portfolio-pack/2026-11-24`, one draft PR, docs only, not merged)
+## ▶ 2026-11-24: Truckroll portfolio pack (branch `portfolio-pack/2026-11-24`, PR #10, docs only; merged 2026-11-24 as `e15be14` on Shane's approval, CI green on `main`)
 **Not deployed.** A closeout pack for the portfolio, minus live verification. The 2026-11-23 attempt left only the brief
 doc; why it stopped is unknown. Judgment calls: D-75 to D-80.
 - **Done:** `docs/DEMO.md` (At a glance + 18 stops, D-77), exec brief "Truckroll in Brief" kept and corrected in place
@@ -16,7 +16,7 @@ doc; why it stopped is unknown. Judgment calls: D-75 to D-80.
   (287 passed, 91 skipped; not a code result). `npm run test:e2e` not run. Both need Postgres, which this sandbox could
   not start (D-76); the PR's CI is the gate. No demo stop clicked through by hand; no live Claude ETA text ever run.
 - **Doc fixes that would need code (not done):** none found.
-- **You:** (1) review the draft PR and its CI; (2) click through `docs/DEMO.md` and mark stops 12, 13, 17; (3) read the
+- **You:** (1) ~~review the PR~~ done, merged; (2) click through `docs/DEMO.md` and mark stops 12, 13, 17; (3) read the
   brief; (4) edit the LinkedIn drafts before posting; (5) decide whether to deploy (a pilot needs D-05 real SMS, D-01
   road times, D-59 shop names).
 
